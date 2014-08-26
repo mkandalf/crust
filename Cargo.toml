@@ -1,0 +1,16 @@
+[package]
+
+name = "crust"
+version = "0.1.0"
+authors = [ "nicholasmeyer@gmail.com" ]
+
+[[bin]]
+
+name = "chess"
+path = "src/main.rs"
+
+[lib]
+
+name = "chess"
+path = "src/lib.rs"
+bench = true
