@@ -6,11 +6,11 @@ authors = [ "nicholasmeyer@gmail.com" ]
 
 [[bin]]
 
-name = "chess"
+name = "crust"
 path = "src/main.rs"
 
 [lib]
 
-name = "chess"
+name = "crust"
 path = "src/lib.rs"
 bench = true

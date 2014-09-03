@@ -34,7 +34,7 @@ fn main() {
     loop {
         let mut user_move;
         let available_moves = searcher.pos.gen_moves(false);
-        print!("{}\n", available_moves);
+        println!("Available Moves: {}", available_moves);
         let mut move_map = HashMap::new();
         for move in available_moves.iter() {
             move_map.insert(move::to_int(*move) & 0xfff, move);
@@ -63,14 +63,14 @@ fn main() {
             }
         }
         searcher.pos.make_move(user_move);
-        let move = searcher.search(0.5, true);
+        let move = searcher.search(0.75, true);
         if move == move::NULL {
             print!("game over");
             break;
         } else {
             searcher.pos.make_move(move);
-            print!("Computer move: {}\n", move);
-            print!("regular nodes: {}\nquiesce nodes: {}\n", searcher.node_count, searcher.quiescent_node_count); 
+            println!("Computer move: {}", move);
+            println!("all nodes: {}\nquiesce nodes: {}", searcher.node_count, searcher.quiescent_node_count); 
             print!("{}", searcher.pos);
         }
     }

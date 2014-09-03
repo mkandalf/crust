@@ -23,4 +23,4 @@ Crust is a simple Chess engine written in [Rust][rust-home].
 * Null Move Pruning
 
 ## Build
-Simply run `cargo run`. To run a simple benchmark, run `cargo bench` (this may take a little while).
+Simply run `cargo build --release && ./target/release/crust`. To run a simple benchmark, run `cargo bench` (this may take a little while).

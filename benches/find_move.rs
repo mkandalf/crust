@@ -1,5 +1,5 @@
 extern crate test;
-extern crate chess;
+extern crate crust;
 
 use test::Bencher;
 
@@ -8,11 +8,11 @@ fn bench_find_move(b: &mut Bencher) {
     use std::io;
     use std::io::{BufferedReader, File};
 
-    use chess::position::Position;
-    use chess::search::Searcher;
+    use crust::position::Position;
+    use crust::search::Searcher;
 
-    use chess::constants;
-    use chess::zobrist;
+    use crust::constants;
+    use crust::zobrist;
 
     // Initialize various constants, including magic bitboards
     constants::init();
