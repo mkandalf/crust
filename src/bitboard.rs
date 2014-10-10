@@ -9,6 +9,62 @@ use square::Square;
 #[deriving(PartialEq, Eq)]
 pub struct BitBoard(pub u64);
 
+mod test {
+    use bitboard;
+    use bitboard::BitBoard;
+    use square::Square;
+    #[test]
+    fn bit_scan_forward() {
+        assert!(bitboard::bit_scan_forward(BitBoard(0x01)) == Square(0));
+        assert!(bitboard::bit_scan_forward(BitBoard(0x10)) == Square(4));
+        assert!(bitboard::bit_scan_forward(BitBoard(0x1000)) == Square(12));
+    }
+
+    #[test]
+    fn popcnt() {
+        assert!(bitboard::popcnt(BitBoard(0x01)) == 1);
+        assert!(bitboard::popcnt(BitBoard(0xff0)) == 8);
+        assert!(bitboard::popcnt(BitBoard(0x1f00)) == 5);
+    }
+
+    #[test]
+    fn is_bit_set() {
+        assert!(bitboard::is_bit_set(BitBoard(0x01), Square(0)) == true);
+        assert!(bitboard::is_bit_set(BitBoard(0xff0), Square(5)) == true);
+        assert!(bitboard::is_bit_set(BitBoard(0x1f00), Square(3)) == false);
+    }
+
+    #[test]
+    fn clear_bit() {
+        let mut b1 = &mut BitBoard(0x01);
+        bitboard::clear_bit(b1, Square(0));
+        assert!(*b1 == BitBoard(0x0));
+
+        let mut b2 = &mut BitBoard(0xff0);
+        bitboard::clear_bit(b2, Square(0));
+        assert!(*b2 == BitBoard(0xff0));
+
+        let mut b3 = &mut BitBoard(0x1f00);
+        bitboard::clear_bit(b3, Square(8));
+        assert!(*b3 == BitBoard(0x1e00));
+    }
+
+    #[test]
+    fn set_bit() {
+        let mut b1 = &mut BitBoard(0x01);
+        bitboard::set_bit(b1, Square(0));
+        assert!(*b1 == BitBoard(0x1));
+
+        let mut b2 = &mut BitBoard(0xff0);
+        bitboard::set_bit(b2, Square(0));
+        assert!(*b2 == BitBoard(0xff1));
+
+        let mut b3 = &mut BitBoard(0x1f00);
+        bitboard::set_bit(b3, Square(8));
+        assert!(*b3 == BitBoard(0x1f00));
+    }
+}
+
 impl ops::BitAnd<BitBoard, BitBoard> for BitBoard {
     fn bitand (&self, &BitBoard(b1) : &BitBoard) -> BitBoard {
         let BitBoard(b2) = *self;
