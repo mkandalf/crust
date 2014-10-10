@@ -7,7 +7,7 @@ in_between, no_we_one, so_we_one, no_ea_one, so_ea_one, from_pieces};
 use color;
 use color::{Color, WHITE, BLACK};
 use constants;
-use move::{Move, get_from, get_to, get_promotion, is_castle};
+use _move::{Move, get_from, get_to, get_promotion, is_castle};
 use piece;
 use piece::{Piece, NP,
             WP, WN, WB, WR, WQ, WK,
@@ -170,9 +170,9 @@ impl Position {
         self.by_piece[piece_type] & self.by_color[color]
     }
 
-    pub fn move_is_legal(&mut self, move: Move, pinned: BitBoard, checkers: BitBoard) -> bool {
-        let from = get_from(move);
-        let to = get_to(move);
+    pub fn move_is_legal(&mut self, _move: Move, pinned: BitBoard, checkers: BitBoard) -> bool {
+        let from = get_from(_move);
+        let to = get_to(_move);
         let PieceType(piece) = self.type_of_piece_on(from);
 
         if checkers != BitBoard(0) {
@@ -209,13 +209,13 @@ impl Position {
                     }
                 }
             }
-            if is_castle(move) {
+            if is_castle(_move) {
                 return false;
             }
         } else {
             // Only check for castling being valid in the no checkers case,
             // since we already invalidated it otherwise
-            if is_castle(move) {
+            if is_castle(_move) {
                 static castle_sqs : [[[Square, ..2], ..2], ..2] =
                     [[[Square(5), Square(6)], [Square(3), Square(2)]],
                      [[Square(61), Square(62)], [Square(59), Square(58)]]]; 
@@ -260,7 +260,7 @@ impl Position {
             }
         }
         // No need to check here if it's a castle, we already did it above
-        if PieceType(piece) == KING && !is_castle(move) {
+        if PieceType(piece) == KING && !is_castle(_move) {
             if self.attacks_for_occ(to, self.occupied ^ self.pieces(self.to_move, KING)) != BitBoard(0) {
                 return false;
             }
@@ -268,15 +268,15 @@ impl Position {
         return true;
     }
 
-    pub fn make_move(&mut self, move: Move) -> () {
+    pub fn make_move(&mut self, _move: Move) -> () {
         self.ep_square_hist.push(self.ep_square);
         self.castling_hist.push(self.castling_rights);
         self.half_moves_hist.push(self.half_moves);
 
         self.half_moves += 1;
 
-        let from = get_from(move);
-        let to = get_to(move);
+        let from = get_from(_move);
+        let to = get_to(_move);
 
         let us = self.to_move;
         let Color(us_int) = us;
@@ -335,16 +335,16 @@ impl Position {
                 set_bit(&mut self.by_piece[0], target);
                 self.set_piece_on(target, NP);
                 self.hash.clear_piece(PAWN, them, target);
-            } else if get_promotion(move) != NO_PIECE_TYPE {
+            } else if get_promotion(_move) != NO_PIECE_TYPE {
                 // Promotion
                 clear_bit(self.mut_pieces_of_type(piece), to);
-                self.set_piece_on(to, Piece::new(get_promotion(move), us));
-                set_bit(self.mut_pieces_of_type(get_promotion(move)), to);
+                self.set_piece_on(to, Piece::new(get_promotion(_move), us));
+                set_bit(self.mut_pieces_of_type(get_promotion(_move)), to);
                 self.hash.clear_piece(PAWN, us, to);
-                self.hash.set_piece(get_promotion(move), us, to);
+                self.hash.set_piece(get_promotion(_move), us, to);
             }
         } else if piece == KING {
-            if is_castle(move) {
+            if is_castle(_move) {
                 static rook_sqs : [[Square, ..2], ..2] =
                     [[Square(7), Square(0)], [Square(63), Square(56)]];
                 static rook_dests : [[Square, ..2], ..2] =
@@ -407,7 +407,7 @@ impl Position {
 
     }
 
-    pub fn unmake_move(&mut self, move: Move) -> () {
+    pub fn unmake_move(&mut self, _move: Move) -> () {
         self.hash.flip_color();
         self.to_move = color::flip(self.to_move);
 
@@ -421,8 +421,8 @@ impl Position {
         self.castling_rights = self.castling_hist.pop().unwrap();
         self.hash.set_castling(self.castling_rights);
 
-        let from = get_from(move);
-        let to = get_to(move);
+        let from = get_from(_move);
+        let to = get_to(_move);
 
         let us = self.to_move;
         let us_int = color::to_int(us);
@@ -446,16 +446,16 @@ impl Position {
                 self.set_piece_on(target, Piece::new(PAWN, them));
                 self.hash.set_piece(PAWN, them, target);
             }
-        } else if get_promotion(move) != NO_PIECE_TYPE {
+        } else if get_promotion(_move) != NO_PIECE_TYPE {
             // Set explicitly the pawn board. Piece is incorrect here...
             set_bit(self.mut_pieces_of_type(PAWN), to);
-            clear_bit(self.mut_pieces_of_type(get_promotion(move)), to);
+            clear_bit(self.mut_pieces_of_type(get_promotion(_move)), to);
             // Set the piece now so when we grab it again after this
             // if/else block it will be correctly a pawn
             self.set_piece_on(to, Piece::new(PAWN, us));
-            self.hash.clear_piece(get_promotion(move), us, to);
+            self.hash.clear_piece(get_promotion(_move), us, to);
             self.hash.set_piece(PAWN, us, to);
-        } else if is_castle(move) {
+        } else if is_castle(_move) {
             static rook_sqs : [[Square, ..2], ..2] =
                 [[Square(7), Square(0)], [Square(63), Square(56)]];
             static rook_dests : [[Square, ..2], ..2] =
@@ -971,18 +971,18 @@ pub fn perft(position: &mut Position, depth: int) -> uint {
     let pinned = position.pinned_pieces();
     let checkers = position.checkers();
     if depth == 1 {
-        for move in moves.iter() {
-            if position.move_is_legal(*move, pinned, checkers) {
+        for _move in moves.iter() {
+            if position.move_is_legal(*_move, pinned, checkers) {
                 count += 1;
             }
         }
         return count;
     }
-    for move in moves.iter() {
-        if position.move_is_legal(*move, pinned, checkers) {
-            position.make_move(*move);
+    for _move in moves.iter() {
+        if position.move_is_legal(*_move, pinned, checkers) {
+            position.make_move(*_move);
             count += perft(position, depth - 1);
-            position.unmake_move(*move);
+            position.unmake_move(*_move);
         }
     }
     return count;
@@ -994,18 +994,18 @@ pub fn divide(position: &mut Position, depth: int) -> HashMap<Move, uint> {
     let moves = position.gen_moves(false);
     let mut res = HashMap::new ();
     if depth == 1 {
-        for move in moves.iter() {
-            if position.move_is_legal(*move, pinned, checkers) {
-                res.insert(*move, 1);
+        for _move in moves.iter() {
+            if position.move_is_legal(*_move, pinned, checkers) {
+                res.insert(*_move, 1);
             }
         }
         return res;
     }
-    for move in moves.iter() {
-        if position.move_is_legal(*move, pinned, checkers) {
-            position.make_move(*move);
-            res.insert(*move, perft(position, depth - 1));
-            position.unmake_move(*move);
+    for _move in moves.iter() {
+        if position.move_is_legal(*_move, pinned, checkers) {
+            position.make_move(*_move);
+            res.insert(*_move, perft(position, depth - 1));
+            position.unmake_move(*_move);
         }
     }
     return res;
@@ -1015,8 +1015,8 @@ pub fn print_divide(position: &mut Position, depth: int) -> () {
     let res =  divide(position, depth);
     let mut keys: Vec<&Move> = res.keys().collect();
     keys.sort_by(|a, b| a.cmp(b));
-    for move in keys.iter() {
-        print!("{} {}\n", move, res.get(*move));
+    for _move in keys.iter() {
+        print!("{} {}\n", _move, res.get(*_move));
     }
 }
 

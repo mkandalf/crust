@@ -1,7 +1,7 @@
 extern crate time;
 
-use move;
-use move::Move;
+use _move;
+use _move::Move;
 use piece_type::PieceType;
 use position::Position;
 use zobrist::{Table, EXACT_BOUND, ALPHA_BOUND, BETA_BOUND};
@@ -18,11 +18,11 @@ pub struct Searcher {
     pub ancient: uint
 }
 
-fn move_delta(move: Move, pos: &Position) -> int {
+fn move_delta(_move: Move, pos: &Position) -> int {
     static weights : [int, ..7] = [0, 100, 350, 350, 525, 1000, 20000];
-    let PieceType(from) = pos.type_of_piece_on(move::get_from(move));
-    let PieceType(to) = pos.type_of_piece_on(move::get_to(move));
-    if move::get_to(move) == pos.ep_square {
+    let PieceType(from) = pos.type_of_piece_on(_move::get_from(_move));
+    let PieceType(to) = pos.type_of_piece_on(_move::get_to(_move));
+    if _move::get_to(_move) == pos.ep_square {
         return 0;
     } else {
         return weights[to] - weights[from];
@@ -36,16 +36,16 @@ impl Searcher {
             node_count: 0,
             pos: pos,
             table: box Table::new(),
-            killers: [[move::NULL, ..2], ..32],
+            killers: [[_move::NULL, ..2], ..32],
             ancient: 0
         }
     }
 
-    fn set_killer(&mut self, move: Move, ply: uint) -> () {
-        if self.killers[ply][0] != move::NULL {
+    fn set_killer(&mut self, _move: Move, ply: uint) -> () {
+        if self.killers[ply][0] != _move::NULL {
             self.killers[ply][1] = self.killers[ply][0];
         }
-        self.killers[ply][0] = move;
+        self.killers[ply][0] = _move;
     }
 
     pub fn alphabeta(&mut self, alpha: int, beta: int, depth: uint, ply: uint) -> int {
@@ -58,7 +58,7 @@ impl Searcher {
         }
         if depth == 0 { 
             let score = self.quiesce(alpha, beta);
-            self.table.record(self.pos.hash, score, move::NULL, depth, EXACT_BOUND, self.ancient);
+            self.table.record(self.pos.hash, score, _move::NULL, depth, EXACT_BOUND, self.ancient);
             return score;
         }
 
@@ -67,39 +67,39 @@ impl Searcher {
         let checkers = self.pos.checkers();
 
         let mut alpha = alpha;
-        let mut best = move::NULL;
+        let mut best = _move::NULL;
 
         let [killer_move_one, killer_move_two] = self.killers[ply];
         let mut moves = self.pos.gen_moves(false);
 
-        for move in moves.mut_iter() {
-            if *move == best_move {
-                move.set_score(10000);
-            } else if *move == killer_move_one {
-                move.set_score(9999);
-            } else if *move == killer_move_two {
-                move.set_score(9998);
-            } else if move::is_attack(*move) {
-                let sc = move_delta(*move, &self.pos) + 5;
-                move.set_score(sc);
+        for _move in moves.mut_iter() {
+            if *_move == best_move {
+                _move.set_score(10000);
+            } else if *_move == killer_move_one {
+                _move.set_score(9999);
+            } else if *_move == killer_move_two {
+                _move.set_score(9998);
+            } else if _move::is_attack(*_move) {
+                let sc = move_delta(*_move, &self.pos) + 5;
+                _move.set_score(sc);
             }
         }
 
         moves.sort_by(|a, b| b.get_score().cmp(&a.get_score()));
 
-        for move in moves.iter() {
-            if self.pos.move_is_legal(*move, pinned, checkers) {
-                self.pos.make_move(*move);
+        for _move in moves.iter() {
+            if self.pos.move_is_legal(*_move, pinned, checkers) {
+                self.pos.make_move(*_move);
                 let score = -self.alphabeta(-beta, -alpha, depth - 1, ply + 1);
-                self.pos.unmake_move(*move);
+                self.pos.unmake_move(*_move);
                 if score >= beta {
-                    self.set_killer(*move, ply);
-                    self.table.record(self.pos.hash, beta, *move, depth, BETA_BOUND, self.ancient);
+                    self.set_killer(*_move, ply);
+                    self.table.record(self.pos.hash, beta, *_move, depth, BETA_BOUND, self.ancient);
                     return beta;
                 }
                 if score > alpha {
                     alpha = score;
-                    best = *move;
+                    best = *_move;
                 }
             }
         }
@@ -126,11 +126,11 @@ impl Searcher {
         if moves.len() != 0 {
             let pinned = self.pos.pinned_pieces();
             let checkers = self.pos.checkers();
-            for move in moves.iter() {
-                if self.pos.move_is_legal(*move, pinned, checkers) {
-                    self.pos.make_move(*move);
+            for _move in moves.iter() {
+                if self.pos.move_is_legal(*_move, pinned, checkers) {
+                    self.pos.make_move(*_move);
                     let score = -self.quiesce(-beta, -alpha);
-                    self.pos.unmake_move(*move);
+                    self.pos.unmake_move(*_move);
                     if score >= beta {
                         return beta;
                     }
@@ -151,23 +151,23 @@ impl Searcher {
 
         if depth == 0 { 
             debug_assert!(false, "Root alpha beta with depth 0");
-            return (move::NULL, 0);
+            return (_move::NULL, 0);
         }
 
         let pinned = self.pos.pinned_pieces();
         let checkers = self.pos.checkers();
 
-        let mut best = move::NULL;
+        let mut best = _move::NULL;
 
         let moves = self.pos.gen_moves(false);
 
-        for move in moves.iter() {
-            if self.pos.move_is_legal(*move, pinned, checkers) {
-                self.pos.make_move(*move);
+        for _move in moves.iter() {
+            if self.pos.move_is_legal(*_move, pinned, checkers) {
+                self.pos.make_move(*_move);
                 let score = -self.alphabeta(-beta, -alpha, depth - 1, 1);
-                self.pos.unmake_move(*move);
+                self.pos.unmake_move(*_move);
                 if score > alpha {
-                    best = *move;
+                    best = *_move;
                     alpha = score;
                 } else {
                 }
@@ -184,26 +184,26 @@ impl Searcher {
         let mut alpha: int = -1000000;
         let mut beta: int = 1000000;
         loop {
-            let (move, score) = self.root_alpha_beta(alpha, beta, i);
-            let (move, score) =
+            let (_move, score) = self.root_alpha_beta(alpha, beta, i);
+            let (_move, score) =
                 if score <= alpha || score >= beta {
                     alpha = -1000000;
                     beta = 1000000;
                     self.root_alpha_beta(alpha, beta, i)
                 } else {
-                    (move, score)
+                    (_move, score)
                 };
             alpha = score - WINDOW;
             beta = score + WINDOW;
             if print {
-                print!("{}:\t({})\t{}\n", i, score as f64 / 100.0, self.extract_pv(move));
+                print!("{}:\t({})\t{}\n", i, score as f64 / 100.0, self.extract_pv(_move));
             }
             let elapsed = time::precise_time_s() - time;
             if elapsed > secs {
                 if print {
                     print!("Elapsed: {}\n", elapsed);
                 }
-                return move;
+                return _move;
             }
             i += 1;
         }
@@ -215,27 +215,27 @@ impl Searcher {
         let mut alpha: int = -1000000;
         let mut beta: int = 1000000;
         loop {
-            let (move, score) = self.root_alpha_beta(alpha, beta, i);
-            let (move, score) =
+            let (_move, score) = self.root_alpha_beta(alpha, beta, i);
+            let (_move, score) =
                 if score <= alpha || score >= beta {
                     alpha = -1000000;
                     beta = 1000000;
                     self.root_alpha_beta(alpha, beta, i)
                 } else {
-                    (move, score)
+                    (_move, score)
                 };
             alpha = score - WINDOW;
             beta = score + WINDOW;
             if print {
-                print!("{}:\t({})\t{}\n", i, score as f64 / 100.0, self.extract_pv(move));
+                print!("{}:\t({})\t{}\n", i, score as f64 / 100.0, self.extract_pv(_move));
             }
-            if i == depth { return move; }
+            if i == depth { return _move; }
             i += 1;
         }
     }
 
     pub fn extract_pv(&mut self, best: Move) -> Vec<Move> {
-        if best == move::NULL {
+        if best == _move::NULL {
             return vec![];
         } else {
             let pv = &mut vec![];

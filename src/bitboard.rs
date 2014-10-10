@@ -66,7 +66,7 @@ impl ops::Not<BitBoard> for BitBoard {
 }
 
 pub fn clear_lsb(BitBoard(b) : BitBoard) -> BitBoard {
-    return BitBoard(b & (b -1));
+    return BitBoard(b & (b - 1));
 }
 
 pub fn from_pieces(pieces : [Piece, ..64], f:|Piece| -> bool) -> BitBoard {

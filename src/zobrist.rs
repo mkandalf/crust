@@ -5,7 +5,7 @@ use piece::Piece;
 use piece_type::PieceType;
 use color;
 use color::Color;
-use move::Move;
+use _move::Move;
 use square::Square;
 
 #[deriving(Eq, PartialEq, Show)]
@@ -70,46 +70,46 @@ impl Table {
     }
 
     pub fn probe(&self, hash: ZobristHash, depth: uint, alpha: int, beta: int) -> (Option<int>, Move) {
-        use move;
+        use _move;
         let entry: Entry = self.table[hash % TABLE_SIZE as u64];
         if entry != NULL_ENTRY && entry.get_hash() == hash {
             if entry.get_depth() >= depth {
                 if entry.get_type() == ALPHA_BOUND {
                     if alpha >= entry.get_score() {
-                        return (Some(entry.get_score()), move::NULL);
+                        return (Some(entry.get_score()), _move::NULL);
                     }
                 } else if entry.get_type() == BETA_BOUND {
                     if beta <= entry.get_score() {
-                        return (Some(entry.get_score()), move::NULL);
+                        return (Some(entry.get_score()), _move::NULL);
                     }
                 } else if entry.get_type() == EXACT_BOUND {
-                    return (Some(entry.get_score()), move::NULL);
+                    return (Some(entry.get_score()), _move::NULL);
                 }
             }
-            let move = entry.get_move();
-            return (None, move);
+            let _move = entry.get_move();
+            return (None, _move);
         }
-        return (None, move::NULL);
+        return (None, _move::NULL);
     }
 
     pub fn best_move(&self, hash: ZobristHash) -> Option<Move> {
-        use move;
+        use _move;
         let entry: Entry = self.table[hash % TABLE_SIZE as u64];
         if entry != NULL_ENTRY && entry.get_hash() == hash {
-            let move = entry.get_move();
-            match move {
-                move::NULL => None,
-                _ => Some(move)
+            let _move = entry.get_move();
+            match _move {
+                _move::NULL => None,
+                _ => Some(_move)
             }
         } else {
             return None;
         }
     }
 
-    pub fn record(&mut self, hash: ZobristHash, score: int, move: Move, depth: uint, bound: Bound, ancient: uint) -> () {
+    pub fn record(&mut self, hash: ZobristHash, score: int, _move: Move, depth: uint, bound: Bound, ancient: uint) -> () {
         let entry: Entry = self.table[hash % TABLE_SIZE as u64];
         if depth >= entry.get_depth() || (entry.get_ancient() != ancient && entry.get_hash() != hash) {
-            self.table[hash % TABLE_SIZE as u64] = Entry::new(hash, score, move, depth, bound, ancient);
+            self.table[hash % TABLE_SIZE as u64] = Entry::new(hash, score, _move, depth, bound, ancient);
         }
     }
 

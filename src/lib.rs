@@ -2,7 +2,7 @@
 pub mod bitboard;
 pub mod color;
 pub mod constants;
-pub mod move;
+pub mod _move;
 pub mod piece;
 pub mod piece_type;
 pub mod position;
