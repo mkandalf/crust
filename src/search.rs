@@ -19,13 +19,13 @@ pub struct Searcher {
 }
 
 fn move_delta(_move: Move, pos: &Position) -> int {
-    static weights : [int, ..7] = [0, 100, 350, 350, 525, 1000, 20000];
+    static WEIGHTS : [int, ..7] = [0, 100, 350, 350, 525, 1000, 20000];
     let PieceType(from) = pos.type_of_piece_on(_move::get_from(_move));
     let PieceType(to) = pos.type_of_piece_on(_move::get_to(_move));
     if _move::get_to(_move) == pos.ep_square {
         return 0;
     } else {
-        return weights[to] - weights[from];
+        return WEIGHTS[to] - WEIGHTS[from];
     }
 }
 
@@ -72,7 +72,7 @@ impl Searcher {
         let [killer_move_one, killer_move_two] = self.killers[ply];
         let mut moves = self.pos.gen_moves(false);
 
-        for _move in moves.mut_iter() {
+        for _move in moves.iter_mut() {
             if *_move == best_move {
                 _move.set_score(10000);
             } else if *_move == killer_move_one {

@@ -10,9 +10,6 @@ use square::Square;
 pub struct BitBoard(pub u64);
 
 mod test {
-    use bitboard;
-    use bitboard::BitBoard;
-    use square::Square;
     #[test]
     fn bit_scan_forward() {
         assert!(bitboard::bit_scan_forward(BitBoard(0x01)) == Square(0));
@@ -166,10 +163,12 @@ pub fn so_we_one(b : BitBoard) -> BitBoard {
     return (b >> 9) & NOT_FILE_H;
 }
 
+#[inline(always)]
 pub fn single_bit(Square(s): Square) -> BitBoard {
     return BitBoard (1 << s);
 }
 
+#[inline(always)]
 pub fn circular_left_shift(BitBoard(b): BitBoard, shift: uint) -> BitBoard {
     return BitBoard(b << shift | b >> (64 - shift));
 }
@@ -214,20 +213,24 @@ pub fn popcnt(BitBoard(mask) : BitBoard) -> uint {
     }
 }
 
+#[inline(always)]
 pub fn is_bit_set (BitBoard(board): BitBoard, Square(square): Square) -> bool {
     ((1_u64 << square) & board) != 0
 }
 
+#[inline(always)]
 pub fn set_bit (bitboard: &mut BitBoard, Square(square): Square) -> () {
     let BitBoard(board) = *bitboard;
     *bitboard = BitBoard(board | (1 << square));
 }
 
+#[inline(always)]
 pub fn clear_bit (bitboard: &mut BitBoard, Square(square): Square) -> () {
     let BitBoard(board) = *bitboard;
     *bitboard = BitBoard(board ^ (1 << square));
 }
 
+#[inline(always)]
 pub fn in_between(Square(s1): Square, Square(s2): Square) -> BitBoard {
     return constants::get_between_bb()[s1][s2];
 }
