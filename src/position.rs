@@ -300,7 +300,7 @@ impl Position {
         clear_bit(self.mut_pieces_of_type(piece), from);
         clear_bit(self.mut_pieces_of_color(us), from);
         clear_bit(&mut self.occupied, from);
-        clear_bit(&mut self.by_piece[0], to);
+        set_bit(&mut self.by_piece[0], from);
         self.set_piece_on(from, NP);
         self.hash.clear_piece(piece, us, from);
 
@@ -308,7 +308,7 @@ impl Position {
         set_bit(self.mut_pieces_of_type(piece), to);
         set_bit(self.mut_pieces_of_color(us), to);
         set_bit(&mut self.occupied, to);
-        set_bit(&mut self.by_piece[0], from);
+        clear_bit(&mut self.by_piece[0], to);
         self.set_piece_on(to, on_from);
         self.hash.set_piece(piece, us, to);
 

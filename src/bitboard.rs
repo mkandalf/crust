@@ -10,6 +10,9 @@ use square::Square;
 pub struct BitBoard(pub u64);
 
 mod test {
+    use bitboard::{self, BitBoard};
+    use square::Square;
+
     #[test]
     fn bit_scan_forward() {
         assert!(bitboard::bit_scan_forward(BitBoard(0x01)) == Square(0));
@@ -240,10 +243,9 @@ pub fn set_bit (bitboard: &mut BitBoard, Square(square): Square) -> () {
     *bitboard = BitBoard(board | (1 << square));
 }
 
-#[inline(always)]
 pub fn clear_bit (bitboard: &mut BitBoard, Square(square): Square) -> () {
     let BitBoard(board) = *bitboard;
-    *bitboard = BitBoard(board ^ (1 << square));
+    *bitboard = BitBoard(board & !(1 << square));
 }
 
 #[inline(always)]
