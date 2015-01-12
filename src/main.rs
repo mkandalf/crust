@@ -1,4 +1,5 @@
 #![feature(asm)]
+#![feature(box_syntax)]
 
 mod bitboard;
 mod color;
@@ -34,7 +35,7 @@ fn main() {
     loop {
         let mut user_move;
         let available_moves = searcher.pos.gen_moves(false);
-        println!("Available Moves: {}", available_moves);
+        println!("Available Moves: {:?}", available_moves);
         let mut move_map = HashMap::new();
         for _move in available_moves.iter() {
             move_map.insert(_move::to_int(*_move) & 0xfff, _move);
@@ -69,9 +70,9 @@ fn main() {
             break;
         } else {
             searcher.pos.make_move(_move);
-            println!("Computer move: {}", _move);
+            println!("Computer move: {:?}", _move);
             println!("all nodes: {}\nquiesce nodes: {}", searcher.node_count, searcher.quiescent_node_count); 
-            print!("{}", searcher.pos);
+            print!("{:?}", searcher.pos);
         }
     }
 }

@@ -17,14 +17,15 @@ use piece_type::{PieceType, NO_PIECE_TYPE, from_char};
 use square;
 use square::{Square};
 use zobrist::ZobristHash;
+use std::str::FromStr;
 
 pub struct Position {
     pub occupied: BitBoard,
     pub to_move: Color,
-    pub by_piece: [BitBoard, ..7],
-    pub by_color: [BitBoard, ..2],
+    pub by_piece: [BitBoard; 7],
+    pub by_color: [BitBoard; 2],
     pub castling_rights : u8,
-    pub board: [Piece, ..64],
+    pub board: [Piece; 64],
     pub ep_square: Square,
     pub ep_square_hist: Vec<Square>,
     pub castling_hist: Vec<u8>,
@@ -36,21 +37,19 @@ pub struct Position {
 
 impl Position {
     pub fn from_fen(fen: &str) -> Position {
-        use std::char::{is_digit, is_alphabetic, to_digit};
-
         let parts: Vec<&str> = fen.split(' ').collect();
         assert!(parts.len() >= 5);
         assert!(parts[1] == "w" || parts[1] == "b");
         let mut rank_idx: uint = 7;
         let rank_strs: Vec<&str> = parts[0].split('/').collect();
         assert!(rank_strs.len() == 8);
-        let mut board: [Piece, ..64] = [NP, ..64];
+        let mut board: [Piece; 64] = [NP; 64];
         for rank_str in rank_strs.iter() {
             let mut file_idx: uint = 0;
             for c in rank_str.chars() {
-                if is_digit(c) {
-                    file_idx += to_digit(c, 10).expect("");
-                } else if is_alphabetic(c) {
+                if c.is_digit(10) {
+                    file_idx += c.to_digit(10).expect("");
+                } else if c.is_alphabetic() {
                     let color = if c.is_lowercase() { BLACK } else { WHITE };
                     board[rank_idx * 8 + file_idx] = Piece::new(from_char(c.to_lowercase()).expect("fen failed"), color);
                     file_idx += 1;
@@ -69,7 +68,7 @@ impl Position {
 
         let to_move = if parts[1] == "w" { WHITE } else { BLACK };
 
-        let ep_square = if parts[3].is_alphanumeric() { square::from_str(parts[3]).expect("fen failed") } else { square::NULL };
+        let ep_square = if parts[3].chars().all(|c| c.is_alphanumeric()) { square::from_str(parts[3]).expect("fen failed") } else { square::NULL };
 
         return Position {
             occupied: from_pieces(board, |piece| to_type(piece) != NO_PIECE_TYPE),
@@ -87,13 +86,13 @@ impl Position {
                        from_pieces(board, |piece| to_color(piece) == BLACK && to_type(piece) != NO_PIECE_TYPE)],
             to_move: to_move,
             castling_rights: castling_rights,
-            ep_square: if parts[3].is_alphanumeric() { square::from_str(parts[3]).expect("fen failed") } else { square::NULL },
+            ep_square: if parts[3].chars().all(|c| c.is_alphanumeric()) { square::from_str(parts[3]).expect("fen failed") } else { square::NULL },
             ep_square_hist: vec![],
             castling_hist: vec![],
             half_moves_hist: vec![],
             capture_hist: vec![],
             hash: ZobristHash::init(board, to_move, castling_rights, ep_square),
-            half_moves: from_str(parts[4]).unwrap()
+            half_moves: FromStr::from_str(parts[4]).unwrap()
         }
     }
 
@@ -216,7 +215,7 @@ impl Position {
             // Only check for castling being valid in the no checkers case,
             // since we already invalidated it otherwise
             if is_castle(_move) {
-                static CASTLE_SQS : [[[Square, ..2], ..2], ..2] =
+                static CASTLE_SQS : [[[Square; 2]; 2]; 2] =
                     [[[Square(5), Square(6)], [Square(3), Square(2)]],
                      [[Square(61), Square(62)], [Square(59), Square(58)]]]; 
                 let queenside_castle = square::file(to) == 2;
@@ -225,7 +224,7 @@ impl Position {
                 if self.attacks_for_occ(sqs[0], without_king) != BitBoard(0) {
                     return false;
                 }
-                static ROOK_SQS : [[Square, ..2], ..2] =
+                static ROOK_SQS : [[Square; 2]; 2] =
                     [[Square(7), Square(0)], [Square(63), Square(56)]];
                 let without_king_or_rook =
                     self.occupied
@@ -250,7 +249,7 @@ impl Position {
         if to == self.ep_square && PieceType(piece) == PAWN {
             if (bitboard::single_bit(to) & pinned) != BitBoard(0) {
                 let king_sq = bit_scan_forward(self.pieces(self.to_move, KING));
-                static SINGLE_PUSH_DIFFS : [uint, ..2] = [8, 64 - 8];
+                static SINGLE_PUSH_DIFFS : [uint; 2] = [8, 64 - 8];
                 let target = ((from + 64) - SINGLE_PUSH_DIFFS[color::to_int(self.to_move)]) % 64;
                 if ((bitboard::in_between(king_sq, target) & bitboard::single_bit(to))
                     | (bitboard::in_between(king_sq, to) & bitboard::single_bit(target)))
@@ -317,7 +316,7 @@ impl Position {
         let old_ep_square = self.ep_square;
         self.ep_square = square::NULL;
         if piece == PAWN {
-            static SINGLE_PUSH_DIFFS : [uint, ..2] = [64 - 8, 8];
+            static SINGLE_PUSH_DIFFS : [uint; 2] = [64 - 8, 8];
 
             self.half_moves = 0;
 
@@ -345,9 +344,9 @@ impl Position {
             }
         } else if piece == KING {
             if is_castle(_move) {
-                static ROOK_SQS : [[Square, ..2], ..2] =
+                static ROOK_SQS : [[Square; 2]; 2] =
                     [[Square(7), Square(0)], [Square(63), Square(56)]];
-                static ROOK_DESTS : [[Square, ..2], ..2] =
+                static ROOK_DESTS : [[Square; 2]; 2] =
                     [[Square(5), Square(3)], [Square(61), Square(59)]];
                 let queenside_castle = square::file(to) == 2;
                 let rook_from = ROOK_SQS[us_int][queenside_castle as uint];
@@ -370,12 +369,12 @@ impl Position {
                 self.hash.set_piece(ROOK, us, rook_to);
                 // TODO should we just construct the rook piece here...
             }
-            static CASTLING_RIGHTS_MASKS : [u8, ..2] = [5, 10];
+            static CASTLING_RIGHTS_MASKS : [u8; 2] = [5, 10];
             self.hash.clear_castling(self.castling_rights);
             self.castling_rights &= !CASTLING_RIGHTS_MASKS[us_int];
             self.hash.set_castling(self.castling_rights);
         } else if piece == ROOK {
-            static ROOK_SQS : [[Square, ..2], ..2] =
+            static ROOK_SQS : [[Square; 2]; 2] =
                 [[Square(7), Square(0)], [Square(63), Square(56)]];
             // TODO: remove branch?
             let curr_rook_sqs = ROOK_SQS[us_int];
@@ -388,7 +387,7 @@ impl Position {
             }
         }
         if capture == ROOK {
-            static ROOK_SQS : [[Square, ..2], ..2] =
+            static ROOK_SQS : [[Square; 2]; 2] =
                 [[Square(7), Square(0)], [Square(63), Square(56)]];
             let curr_rook_sqs = ROOK_SQS[them_int];
             if to == curr_rook_sqs[0] || to == curr_rook_sqs[1] {
@@ -456,9 +455,9 @@ impl Position {
             self.hash.clear_piece(get_promotion(_move), us, to);
             self.hash.set_piece(PAWN, us, to);
         } else if is_castle(_move) {
-            static ROOK_SQS : [[Square, ..2], ..2] =
+            static ROOK_SQS : [[Square; 2]; 2] =
                 [[Square(7), Square(0)], [Square(63), Square(56)]];
-            static ROOK_DESTS : [[Square, ..2], ..2] =
+            static ROOK_DESTS : [[Square; 2]; 2] =
                 [[Square(5), Square(3)], [Square(61), Square(59)]];
             let queenside_castle = square::file(to) == 2;
             let rook_from = ROOK_SQS[us_int][queenside_castle as uint];
@@ -550,9 +549,9 @@ impl Position {
     }
 
     pub fn gen_castle_moves(&self, moves: &mut Vec<Move>) -> () {
-        static MASKS : [BitBoard, ..4] = [BitBoard(0x60), BitBoard(0x6000000000000000),
+        static MASKS : [BitBoard; 4] = [BitBoard(0x60), BitBoard(0x6000000000000000),
                                           BitBoard(0xe), BitBoard(0xe00000000000000)];
-        static TARGETS : [Square, ..4] = [Square(6), Square(62), Square(2), Square(58)];
+        static TARGETS : [Square; 4] = [Square(6), Square(62), Square(2), Square(58)];
         let king = self.pieces(self.to_move, KING);
         let from = bit_scan_forward(king);
         // O-O
@@ -692,11 +691,11 @@ impl Position {
 
     fn gen_pawn_moves(&self, moves: &mut Vec<Move>, attacks_only: bool) -> () {
         let pawns = self.pieces(self.to_move, PAWN);
-        static PROMOTION_MASK : [BitBoard, ..2] = [bitboard::RANK_8, bitboard::RANK_1];
+        static PROMOTION_MASK : [BitBoard; 2] = [bitboard::RANK_8, bitboard::RANK_1];
         if !attacks_only {
             let empty = !self.occupied;
 
-            static SINGLE_PUSH_DIFFS : [uint, ..2] = [8, 64 - 8];
+            static SINGLE_PUSH_DIFFS : [uint; 2] = [8, 64 - 8];
             let diff = SINGLE_PUSH_DIFFS[color::to_int(self.to_move)];
             let single_pushes = 
                 circular_left_shift(pawns, diff)
@@ -715,9 +714,9 @@ impl Position {
             self.add_pawn_moves(double_pushes, moves, 2 * diff);
         }
 
-        static ATTACK_DIFFS : [[uint, ..2], ..2] = [[7, 64-9], [9, 64-7]];
-        static FILE_MASKS : [BitBoard, ..2] = [bitboard::NOT_FILE_H, bitboard::NOT_FILE_A];
-        for i in range(0u,2u) {
+        static ATTACK_DIFFS : [[uint; 2]; 2] = [[7, 64-9], [9, 64-7]];
+        static FILE_MASKS : [BitBoard; 2] = [bitboard::NOT_FILE_H, bitboard::NOT_FILE_A];
+        for i in 0..2 {
             let diff = ATTACK_DIFFS[i][color::to_int(self.to_move)];
             let targets = circular_left_shift(pawns, diff) & FILE_MASKS[i];
             let attack_moves = targets & self.pieces_of_color(color::flip(self.to_move));
@@ -811,7 +810,7 @@ impl Position {
 
     pub fn evaluation(&self) -> int {
         use bitboard::popcnt;
-        static PAWN_TABLE : [i8, ..64] = [
+        static PAWN_TABLE : [i8; 64] = [
             0,  0,  0,  0,  0,  0,  0,  0,
             50, 50, 50, 50, 50, 50, 50, 50,
             10, 10, 20, 30, 30, 20, 10, 10,
@@ -821,7 +820,7 @@ impl Position {
             5, 10, 10, -25,-25, 10, 10, 5,
             0, 0,  0,  0,  0,  0,  0,  0
         ];
-        static KNIGHT_TABLE : [i8, ..64] = [
+        static KNIGHT_TABLE : [i8; 64] = [
             -50,-40,-30,-30,-30,-30,-40,-50,
             -40,-20,  0,  0,  0,  0,-20,-40,
             -30,  0, 10, 15, 15, 10, 0, -30,
@@ -831,7 +830,7 @@ impl Position {
             -40,-20,  0,  5,  5,  0,-20,-40,
             -50,-40,-20,-30,-30,-20,-40,-50,
         ];
-        static BISHOP_TABLE : [i8, ..64] = [
+        static BISHOP_TABLE : [i8; 64] = [
             -20,-10,-10,-10,-10,-10,-10,-20,
             -10,  0,  0,  0,  0,  0,  0,-10,
             -10,  0,  5, 10, 10,  5, 0, -10,
@@ -920,7 +919,7 @@ impl Position {
                     + pawn_sqs
                     + knight_sqs
                     + bishop_sqs;
-        static TO_MOVE_ARR : [int, ..2] = [1, -1];
+        static TO_MOVE_ARR : [int; 2] = [1, -1];
         return score * TO_MOVE_ARR[color::to_int(self.to_move)];
     }
 }
@@ -1016,7 +1015,7 @@ pub fn print_divide(position: &mut Position, depth: int) -> () {
     let mut keys: Vec<&Move> = res.keys().collect();
     keys.sort_by(|a, b| a.cmp(b));
     for _move in keys.iter() {
-        print!("{} {}\n", _move, res.get(*_move));
+        print!("{:?} {:?}\n", _move, res.get(*_move));
     }
 }
 
@@ -1025,8 +1024,8 @@ impl fmt::Show for Position {
         use std::iter::range_step;
         for rank in range_step(7, -1, -1 as int) {
             write!(f, "+---+---+---+---+---+---+---+---+\n");
-            for file in range(0u, 8u) {
-                let square = Square(file | (rank as uint << 3));
+            for file in 0..8 {
+                let square = Square(file | ((rank as uint) << 3));
                 write!(f, "| {} ", piece::to_char(self.piece_on(square)));
             }
             write!(f, "|\n");

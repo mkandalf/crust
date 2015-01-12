@@ -3,10 +3,11 @@ use std::fmt;
 use square;
 use square::Square;
 use piece_type::PieceType;
+use std::cmp::Ordering::{self, Less, Equal, Greater};
 
-pub static NULL : Move = Move(0);
+pub const NULL : Move = Move(0);
 
-#[deriving(Eq, Hash, PartialOrd, Clone)]
+#[derive(Eq, Hash, PartialOrd, Copy, Clone)]
 pub struct Move(pub uint);
 
 impl Move {
@@ -57,7 +58,7 @@ impl fmt::Show for Move {
         if (*self) == NULL {
             return write!(f, "NULL");
         }
-        return write!(f, "{}{}", get_from(*self), get_to(*self));
+        return write!(f, "{:?}{:?}", get_from(*self), get_to(*self));
     }
 }
 

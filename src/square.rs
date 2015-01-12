@@ -1,8 +1,9 @@
 use std::ops;
-use std::num;
+use std::num::SignedInt;
 use std::fmt;
+use std::cmp::Ordering::{self, Less, Greater};
 
-#[deriving(PartialOrd, Eq, PartialEq)]
+#[derive(PartialOrd, Eq, PartialEq, Copy)]
 pub struct Square(pub uint);
 impl Square {
     pub fn new (rank:uint, file:uint) -> Square {
@@ -10,33 +11,39 @@ impl Square {
     }
 }
 
-impl ops::Add<uint, Square> for Square {
-    fn add (&self, rhs: &uint) -> Square {
-        let Square(s) = *self;
-        return Square(s + *rhs);
+impl ops::Add<uint> for Square {
+    type Output = Square;
+
+    fn add (self, rhs: uint) -> Square {
+        let Square(lhs) = self;
+        return Square(lhs + rhs);
     }
 }
 
-impl ops::Sub<uint, Square> for Square {
-    fn sub (&self, rhs: &uint) -> Square {
-        let Square(s) = *self;
-        return Square(s - *rhs);
+impl ops::Sub<uint> for Square {
+    type Output = Square;
+
+    fn sub (self, rhs: uint) -> Square {
+        let Square(lhs) = self;
+        return Square(lhs - rhs);
     }
 }
 
-impl ops::Rem<uint, Square> for Square {
-    fn rem (&self, rhs: &uint) -> Square {
-        let Square(s) = *self;
-        return Square(s % *rhs);
+impl ops::Rem<uint> for Square {
+    type Output = Square;
+
+    fn rem (self, rhs: uint) -> Square {
+        let Square(lhs) = self;
+        return Square(lhs % rhs);
     }
 }
 
 impl Ord for Square {
-    fn cmp(&self, other: &Square) -> Ordering {
-        if file(*self) < file(*other) {
+    fn cmp(&self, &other: &Square) -> Ordering {
+        if file(*self) < file(other) {
             return Less;
-        } else if file(*self) == file(*other) {
-            return rank(*self).cmp(&rank(*other));
+        } else if file(*self) == file(other) {
+            return rank(*self).cmp(&rank(other));
         } else {
             return Greater;
         }
@@ -62,7 +69,7 @@ pub fn from_str (s: &str) -> Option<Square> {
 }
 
 pub fn abs_diff (Square(s1): Square, Square(s2): Square) -> uint {
-    return num::abs(s1 as int - s2 as int) as uint;
+    return SignedInt::abs(s1 as int - s2 as int) as uint;
 }
 
 pub fn to_int (Square(s): Square) -> uint {

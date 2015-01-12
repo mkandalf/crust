@@ -4,7 +4,7 @@ use color::{Color, WHITE, BLACK};
 use piece_type;
 use piece_type::PieceType;
 
-#[deriving(PartialEq, Eq, Show)]
+#[derive(PartialEq, Eq, Show, Copy)]
 pub struct Piece(pub uint);
 
 pub static NP : Piece = Piece(0); // No Piece
@@ -40,7 +40,7 @@ pub fn to_color (Piece(piece): Piece) -> Color {
 pub fn to_char (piece: Piece) -> char {
     let type_char = piece_type::to_char(to_type(piece));
     match to_color(piece) {
-        WHITE => char::to_uppercase(type_char),
+        WHITE => type_char.to_uppercase(),
         BLACK => type_char,
         _ => ' '
     }

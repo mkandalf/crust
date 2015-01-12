@@ -3,25 +3,25 @@ use std::iter::range_step;
 use bitboard::{BitBoard, east_one, west_one, north_one, south_one, single_bit, popcnt};
 use square::{Square, file, rank};
 
-static mut king_moves : [BitBoard, ..64] = [BitBoard(0), ..64];
-static mut knight_moves : [BitBoard, ..64] = [BitBoard(0), ..64];
-static mut rook_moves : [BitBoard, ..102400] = [BitBoard(0), ..102400];
-static mut rook_mob : [u8, ..102400] = [0, ..102400];
-static mut bishop_moves : [BitBoard, ..5248] = [BitBoard(0), ..5248];
-static mut bishop_mob : [u8, ..5248] = [0, ..5248];
-static mut between_bb : [[BitBoard, ..64], ..64] = [[BitBoard(0), ..64], ..64];
-pub static MAGIC_NUMBER_SHIFTS_ROOK : [uint, ..64] =
+static mut king_moves : [BitBoard; 64] = [BitBoard(0); 64];
+static mut knight_moves : [BitBoard; 64] = [BitBoard(0); 64];
+static mut rook_moves : [BitBoard; 102400] = [BitBoard(0); 102400];
+static mut rook_mob : [u8; 102400] = [0; 102400];
+static mut bishop_moves : [BitBoard; 5248] = [BitBoard(0); 5248];
+static mut bishop_mob : [u8; 5248] = [0; 5248];
+static mut between_bb : [[BitBoard; 64]; 64] = [[BitBoard(0); 64]; 64];
+pub static MAGIC_NUMBER_SHIFTS_ROOK : [uint; 64] =
     [52,53,53,53,53,53,53,52,53,54,54,54,54,54,54,53,
      53,54,54,54,54,54,54,53,53,54,54,54,54,54,54,53,
      53,54,54,54,54,54,54,53,53,54,54,54,54,54,54,53,
      53,54,54,54,54,54,54,53,52,53,53,53,53,53,53,52];
-pub static MAGIC_NUMBER_SHIFTS_BISHOP : [uint, ..64] =
+pub static MAGIC_NUMBER_SHIFTS_BISHOP : [uint; 64] =
     [58,59,59,59,59,59,59,58,59,59,59,59,59,59,59,
      59,59,59,57,57,57,57,59,59,59,59,57,55,55,57,
      59,59,59,59,57,55,55,57,59,59,59,59,57,57,57,
      57,59,59,59,59,59,59,59,59,59,59,58,59,59,59,
      59,59,59,58];
-pub static MAGIC_NUMBER_ROOK : [u64, ..64] =
+pub static MAGIC_NUMBER_ROOK : [u64; 64] =
     [0xa180022080400230, 0x40100040022000, 0x80088020001002, 0x80080280841000,
      0x4200042010460008, 0x4800a0003040080, 0x400110082041008, 0x8000a041000880,
      0x10138001a080c010, 0x804008200480, 0x10011012000c0, 0x22004128102200,
@@ -38,7 +38,7 @@ pub static MAGIC_NUMBER_ROOK : [u64, ..64] =
      0x8018028040080, 0x88240002008080, 0x10301802830400, 0x332a4081140200,
      0x8080010a601241, 0x1008010400021, 0x4082001007241, 0x211009001200509,
      0x8015001002441801, 0x801000804000603, 0xc0900220024a401, 0x1000200608243];
-pub static MAGIC_NUMBER_BISHOP : [u64, ..64] =
+pub static MAGIC_NUMBER_BISHOP : [u64; 64] =
     [0x2910054208004104, 0x2100630a7020180, 0x5822022042000000, 0x2ca804a100200020,
      0x204042200000900, 0x2002121024000002, 0x80404104202000e8, 0x812a020205010840,
      0x8005181184080048, 0x1001c20208010101, 0x1001080204002100, 0x1810080489021800,
@@ -55,7 +55,7 @@ pub static MAGIC_NUMBER_BISHOP : [u64, ..64] =
      0x8200002022440100, 0x9431801010068, 0x1040c20806108040, 0x804901403022a40,
      0x2400202602104000, 0x208520209440204, 0x40c000022013020, 0x2000104000420600,
      0x400000260142410, 0x800633408100500, 0x2404080a1410, 0x138200122002900];
-pub static OCCUPANCY_MASK_ROOK : [u64, ..64] =
+pub static OCCUPANCY_MASK_ROOK : [u64; 64] =
     [0x101010101017e, 0x202020202027c, 0x404040404047a, 0x8080808080876, 0x1010101010106e,
      0x2020202020205e, 0x4040404040403e, 0x8080808080807e, 0x1010101017e00, 0x2020202027c00,
      0x4040404047a00, 0x8080808087600, 0x10101010106e00, 0x20202020205e00, 0x40404040403e00,
@@ -70,7 +70,7 @@ pub static OCCUPANCY_MASK_ROOK : [u64, ..64] =
      0x6e101010101000, 0x5e202020202000, 0x3e404040404000, 0x7e808080808000,
      0x7e01010101010100, 0x7c02020202020200, 0x7a04040404040400, 0x7608080808080800,
      0x6e10101010101000, 0x5e20202020202000, 0x3e40404040404000, 0x7e80808080808000];
-pub static OCCUPANCY_MASK_BISHOP : [u64, ..64] =
+pub static OCCUPANCY_MASK_BISHOP : [u64; 64] =
     [0x40201008040200, 0x402010080400, 0x4020100a00, 0x40221400, 0x2442800, 0x204085000,
      0x20408102000, 0x2040810204000, 0x20100804020000, 0x40201008040000, 0x4020100a0000,
      0x4022140000, 0x244280000, 0x20408500000, 0x2040810200000, 0x4081020400000,
@@ -84,13 +84,13 @@ pub static OCCUPANCY_MASK_BISHOP : [u64, ..64] =
      0x142240000000, 0x284402000000, 0x500804020000, 0x201008040200, 0x402010080400,
      0x2040810204000, 0x4081020400000, 0xa102040000000, 0x14224000000000, 0x28440200000000,
      0x50080402000000, 0x20100804020000, 0x40201008040200];
-pub static ROOK_INDEXES : [uint, ..64] =
+pub static ROOK_INDEXES : [uint; 64] =
     [0, 4096, 6144, 8192, 10240, 12288, 14336, 16384, 20480, 22528, 23552, 24576, 25600, 26624,
     27648, 28672, 30720, 32768, 33792, 34816, 35840, 36864, 37888, 38912, 40960, 43008, 44032,
     45056, 46080, 47104, 48128, 49152, 51200, 53248, 54272, 55296, 56320, 57344, 58368, 59392,
     61440, 63488, 64512, 65536, 66560, 67584, 68608, 69632, 71680, 73728, 74752, 75776, 76800,
     77824, 78848, 79872, 81920, 86016, 88064, 90112, 92160, 94208, 96256, 98304];
-pub static BISHOP_INDEXES : [uint, ..64] =
+pub static BISHOP_INDEXES : [uint; 64] =
     [0, 64, 96, 128, 160, 192, 224, 256, 320, 352, 384, 416, 448, 480, 512, 544, 576, 608, 640,
     768, 896, 1024, 1152, 1184, 1216, 1248, 1280, 1408, 1920, 2432, 2560, 2592, 2624, 2656, 2688,
     2816, 3328, 3840, 3968, 4000, 4032, 4064, 4096, 4224, 4352, 4480, 4608, 4640, 4672, 4704, 4736,
@@ -106,7 +106,7 @@ pub fn init() -> () {
 }
 
 fn init_king_moves() -> () {
-    for i in range(0u, 64u) {
+    for i in 0..64 {
         let board = single_bit(Square(i));
         let moves = north_one(board) | south_one(board);
         unsafe {
@@ -116,7 +116,7 @@ fn init_king_moves() -> () {
 }
 
 fn init_knight_moves() -> () {
-    for i in range(0u, 64u) {
+    for i in 0..64 {
         let board = single_bit(Square(i));
         let east = east_one(board);
         let west = west_one(board);
@@ -132,14 +132,14 @@ fn init_knight_moves() -> () {
     }
 }
 
-#[allow(unsigned_negate)]
+#[allow(unsigned_negation)]
 fn init_between_bb() -> () {
     static M1 : u64  = -1u64;
     static A2A7 : u64 = 0x0001010101010100u64;
     static B2G7 : u64 = 0x0040201008040200u64;
     static H1B7 : u64 = 0x0002040810204080u64; /* Thanks Dustin, g2b7 did not work for c1-a3 */
-    for sq1 in range(0, 64) {
-        for sq2 in range(0, 64) {
+    for sq1 in 0..64 {
+        for sq2 in 0..64 {
             let btwn = (M1 << sq1) ^ (M1 << sq2);
             let file = ((sq2 & 7) - (sq1 & 7)) as u64;
             let rank = (((sq2 | 7) - sq1) >> 3)  as u64;
@@ -234,7 +234,7 @@ fn bishop_moves_for_occ(sq: Square, b: BitBoard) -> BitBoard {
 }
 
 fn init_rook_moves() -> () {
-    for i in range(0u, 64u) {
+    for i in 0..64 {
         let d: BitBoard = BitBoard(OCCUPANCY_MASK_ROOK[i]);
         let mut subset: BitBoard = BitBoard(0);
         loop {
@@ -251,7 +251,7 @@ fn init_rook_moves() -> () {
 }
 
 fn init_bishop_moves() -> () {
-    for i in range(0u, 64u) {
+    for i in 0..64 {
         let d: BitBoard = BitBoard(OCCUPANCY_MASK_BISHOP[i]);
         let mut subset: BitBoard = BitBoard(0);
         loop {
@@ -268,36 +268,36 @@ fn init_bishop_moves() -> () {
 }
 
 #[inline(always)]
-pub fn get_rook_moves() -> &'static[BitBoard, ..102400] {
+pub fn get_rook_moves() -> &'static[BitBoard; 102400] {
     unsafe { &rook_moves }
 }
 
 #[inline(always)]
-pub fn get_bishop_moves() -> &'static[BitBoard, ..5248] {
+pub fn get_bishop_moves() -> &'static[BitBoard; 5248] {
     unsafe { &bishop_moves }
 }
 
 #[inline(always)]
-pub fn get_rook_mob() -> &'static[u8, ..102400] {
+pub fn get_rook_mob() -> &'static[u8; 102400] {
     unsafe { &rook_mob }
 }
 
 #[inline(always)]
-pub fn get_bishop_mob() -> &'static[u8, ..5248] {
+pub fn get_bishop_mob() -> &'static[u8; 5248] {
     unsafe { &bishop_mob }
 }
 
 #[inline(always)]
-pub fn get_king_moves() -> &'static[BitBoard, ..64] {
+pub fn get_king_moves() -> &'static[BitBoard; 64] {
     unsafe { &king_moves }
 }
 
 #[inline(always)]
-pub fn get_knight_moves() -> &'static[BitBoard, ..64] {
+pub fn get_knight_moves() -> &'static[BitBoard; 64] {
     unsafe { &knight_moves }
 }
 
 #[inline(always)]
-pub fn get_between_bb() -> &'static[[BitBoard, ..64], ..64] {
+pub fn get_between_bb() -> &'static[[BitBoard; 64]; 64] {
     unsafe { &between_bb }
 }

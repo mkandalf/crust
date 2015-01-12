@@ -12,14 +12,14 @@ static WINDOW : int = 50;
 pub struct Searcher {
     pub quiescent_node_count : uint,
     pub node_count : uint,
-    pub pos: Position,
+    pub pos: Box<Position>,
     pub table: Box<Table>,
-    pub killers: [[Move, ..2], ..32],
+    pub killers: [[Move; 2]; 32],
     pub ancient: uint
 }
 
-fn move_delta(_move: Move, pos: &Position) -> int {
-    static WEIGHTS : [int, ..7] = [0, 100, 350, 350, 525, 1000, 20000];
+fn move_delta(_move: Move, pos: &Box<Position>) -> int {
+    static WEIGHTS : [int; 7] = [0, 100, 350, 350, 525, 1000, 20000];
     let PieceType(from) = pos.type_of_piece_on(_move::get_from(_move));
     let PieceType(to) = pos.type_of_piece_on(_move::get_to(_move));
     if _move::get_to(_move) == pos.ep_square {
@@ -34,9 +34,9 @@ impl Searcher {
         Searcher {
             quiescent_node_count: 0,
             node_count: 0,
-            pos: pos,
+            pos: box pos,
             table: box Table::new(),
-            killers: [[_move::NULL, ..2], ..32],
+            killers: [[_move::NULL; 2]; 32],
             ancient: 0
         }
     }
@@ -196,7 +196,7 @@ impl Searcher {
             alpha = score - WINDOW;
             beta = score + WINDOW;
             if print {
-                print!("{}:\t({})\t{}\n", i, score as f64 / 100.0, self.extract_pv(_move));
+                print!("{}:\t({})\t{:?}\n", i, score as f64 / 100.0, self.extract_pv(_move));
             }
             let elapsed = time::precise_time_s() - time;
             if elapsed > secs {
@@ -227,7 +227,7 @@ impl Searcher {
             alpha = score - WINDOW;
             beta = score + WINDOW;
             if print {
-                print!("{}:\t({})\t{}\n", i, score as f64 / 100.0, self.extract_pv(_move));
+                print!("{}:\t({})\t{:?}\n", i, score as f64 / 100.0, self.extract_pv(_move));
             }
             if i == depth { return _move; }
             i += 1;

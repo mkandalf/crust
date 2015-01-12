@@ -6,7 +6,7 @@ use constants;
 use piece::Piece;
 use square::Square;
 
-#[deriving(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Copy)]
 pub struct BitBoard(pub u64);
 
 mod test {
@@ -62,58 +62,74 @@ mod test {
     }
 }
 
-impl ops::BitAnd<BitBoard, BitBoard> for BitBoard {
-    fn bitand (&self, &BitBoard(b1) : &BitBoard) -> BitBoard {
-        let BitBoard(b2) = *self;
-        return BitBoard(b1 & b2);
+impl ops::BitAnd<BitBoard> for BitBoard {
+    type Output = BitBoard;
+
+    fn bitand (self, BitBoard(rhs) : BitBoard) -> BitBoard {
+        let BitBoard(lhs) = self;
+        return BitBoard(lhs & rhs);
     }
 }
 
-impl ops::BitOr<BitBoard, BitBoard> for BitBoard {
-    fn bitor (&self, &BitBoard(b1) : &BitBoard) -> BitBoard {
-        let BitBoard(b2) = *self;
-        return BitBoard(b1 | b2);
+impl ops::BitOr<BitBoard> for BitBoard {
+    type Output = BitBoard;
+
+    fn bitor (self, BitBoard(rhs) : BitBoard) -> BitBoard {
+        let BitBoard(lhs) = self;
+        return BitBoard(lhs | rhs);
     }
 }
 
-impl ops::BitXor<BitBoard, BitBoard> for BitBoard {
-    fn bitxor (&self, &BitBoard(b1) : &BitBoard) -> BitBoard {
-        let BitBoard(b2) = *self;
-        return BitBoard(b1 ^ b2);
+impl ops::BitXor<BitBoard> for BitBoard {
+    type Output = BitBoard;
+
+    fn bitxor (self, BitBoard(rhs) : BitBoard) -> BitBoard {
+        let BitBoard(lhs) = self;
+        return BitBoard(lhs ^ rhs);
     }
 }
 
-impl ops::Shr<uint, BitBoard> for BitBoard {
-    fn shr (&self, rhs : &uint) -> BitBoard {
-        let BitBoard(b) = *self;
-        return BitBoard(b >> *rhs);
+impl ops::Shr<uint> for BitBoard {
+    type Output = BitBoard;
+
+    fn shr (self, rhs : uint) -> BitBoard {
+        let BitBoard(lhs) = self;
+        return BitBoard(lhs >> rhs);
     }
 }
 
-impl ops::Shl<uint, BitBoard> for BitBoard {
-    fn shl (&self, rhs : &uint) -> BitBoard {
-        let BitBoard(b) = *self;
-        return BitBoard(b << *rhs);
+impl ops::Shl<uint> for BitBoard {
+    type Output = BitBoard;
+
+    fn shl (self, rhs : uint) -> BitBoard {
+        let BitBoard(lhs) = self;
+        return BitBoard(lhs << rhs);
     }
 }
 
-impl ops::Sub<BitBoard, BitBoard> for BitBoard {
-    fn sub (&self, &BitBoard(rhs) : &BitBoard) -> BitBoard {
-        let BitBoard(b) = *self;
-        return BitBoard(b - rhs);
+impl ops::Sub<BitBoard> for BitBoard {
+    type Output = BitBoard;
+
+    fn sub (self, BitBoard(rhs) : BitBoard) -> BitBoard {
+        let BitBoard(lhs) = self;
+        return BitBoard(lhs - rhs);
     }
 }
 
-impl ops::Mul<u64, BitBoard> for BitBoard {
-    fn mul (&self, &rhs : &u64) -> BitBoard {
-        let BitBoard(b) = *self;
-        return BitBoard(b * rhs);
+impl ops::Mul<u64> for BitBoard {
+    type Output = BitBoard;
+
+    fn mul (self, rhs : u64) -> BitBoard {
+        let BitBoard(lhs) = self;
+        return BitBoard(lhs * rhs);
     }
 }
 
-impl ops::Not<BitBoard> for BitBoard {
-    fn not (&self) -> BitBoard {
-        let BitBoard(b) = *self;
+impl ops::Not for BitBoard {
+    type Output = BitBoard;
+
+    fn not (self) -> BitBoard {
+        let BitBoard(b) = self;
         return BitBoard(!b);
     }
 }
@@ -122,7 +138,7 @@ pub fn clear_lsb(BitBoard(b) : BitBoard) -> BitBoard {
     return BitBoard(b & (b - 1));
 }
 
-pub fn from_pieces(pieces : [Piece, ..64], f:|Piece| -> bool) -> BitBoard {
+pub fn from_pieces<F: Fn(Piece) -> bool>(pieces : [Piece; 64], f:F) -> BitBoard {
     let mut b = BitBoard(0);
     for x in pieces.iter() {
         b = b >> 1;
@@ -131,12 +147,12 @@ pub fn from_pieces(pieces : [Piece, ..64], f:|Piece| -> bool) -> BitBoard {
     return b;
 }
 
-pub static NOT_FILE_A : BitBoard = BitBoard(0xfefefefefefefefe);
-pub static NOT_FILE_H : BitBoard = BitBoard(0x7f7f7f7f7f7f7f7f);
-pub static RANK_1 : BitBoard = BitBoard(0x00000000000000FF);
-pub static RANK_3 : BitBoard = BitBoard(0x0000000000FF0000);
-pub static RANK_6 : BitBoard = BitBoard(0x0000FF0000000000);
-pub static RANK_8 : BitBoard = BitBoard(0xFF00000000000000);
+pub const NOT_FILE_A : BitBoard = BitBoard(0xfefefefefefefefe);
+pub const NOT_FILE_H : BitBoard = BitBoard(0x7f7f7f7f7f7f7f7f);
+pub const RANK_1 : BitBoard = BitBoard(0x00000000000000FF);
+pub const RANK_3 : BitBoard = BitBoard(0x0000000000FF0000);
+pub const RANK_6 : BitBoard = BitBoard(0x0000FF0000000000);
+pub const RANK_8 : BitBoard = BitBoard(0xFF00000000000000);
 
 pub fn east_one(b : BitBoard) -> BitBoard {
     return (b << 1) & NOT_FILE_A;

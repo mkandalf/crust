@@ -14,3 +14,6 @@ path = "src/main.rs"
 name = "crust"
 path = "src/lib.rs"
 bench = true
+
+[dependencies]
+time = "*"

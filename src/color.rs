@@ -1,8 +1,8 @@
-#[deriving(PartialEq, Eq, Show)]
+#[derive(PartialEq, Eq, Show, Copy)]
 pub struct Color(pub uint);
 
-pub static WHITE : Color = Color(0);
-pub static BLACK : Color = Color(1);
+pub const WHITE : Color = Color(0);
+pub const BLACK : Color = Color(1);
 
 pub fn to_int (Color(color) : Color) -> uint {
     return color;

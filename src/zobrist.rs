@@ -8,28 +8,28 @@ use color::Color;
 use _move::Move;
 use square::Square;
 
-#[deriving(Eq, PartialEq, Show)]
+#[derive(Eq, PartialEq, Show, Copy)]
 pub struct ZobristHash(u64);
 
-static mut piece_keys : [ZobristHash, ..768] = [ZobristHash(0), ..768];
-static mut castle_keys : [ZobristHash, ..16] = [ZobristHash(0), ..16];
-static mut ep_keys : [ZobristHash, ..8] = [ZobristHash(0), ..8];
+static mut piece_keys : [ZobristHash; 768] = [ZobristHash(0); 768];
+static mut castle_keys : [ZobristHash; 16] = [ZobristHash(0); 16];
+static mut ep_keys : [ZobristHash; 8] = [ZobristHash(0); 8];
 static mut black_key : ZobristHash = ZobristHash(0);
 
 pub fn init() -> () {
     use std::rand::{SeedableRng, StdRng, Rng};
     let mut rng: StdRng = SeedableRng::from_seed([1u].as_slice());
-    for i in range(0, 768) {
+    for i in 0..768 {
         unsafe {
             piece_keys[i] = ZobristHash(rng.gen::<u64>());
         }
     }
-    for i in range(0, 16) {
+    for i in 0..16 {
         unsafe {
             castle_keys[i] = ZobristHash(rng.gen::<u64>());
         }
     }
-    for i in range(0, 8) {
+    for i in 0..8 {
         unsafe {
             ep_keys[i] = ZobristHash(rng.gen::<u64>());
         }
@@ -39,17 +39,21 @@ pub fn init() -> () {
     }
 }
 
-impl ops::BitXor<ZobristHash, ZobristHash> for ZobristHash {
-    fn bitxor (&self, &ZobristHash(z1) : &ZobristHash) -> ZobristHash {
-        let ZobristHash(z2) = *self;
-        return ZobristHash(z1 ^ z2);
+impl ops::BitXor<ZobristHash> for ZobristHash {
+    type Output = ZobristHash;
+
+    fn bitxor (self, ZobristHash(rhs) : ZobristHash) -> ZobristHash {
+        let ZobristHash(lhs) = self;
+        return ZobristHash(lhs ^ rhs);
     }
 }
 
-impl ops::Rem<u64, uint> for ZobristHash {
-    fn rem (&self, rhs: &u64) -> uint {
-        let ZobristHash(z) = *self;
-        return (z % *rhs) as uint;
+impl ops::Rem<u64> for ZobristHash {
+    type Output = uint;
+
+    fn rem (self, rhs: u64) -> uint {
+        let ZobristHash(lhs) = self;
+        return (lhs % rhs) as uint;
     }
 }
 
@@ -58,15 +62,15 @@ impl ops::Rem<u64, uint> for ZobristHash {
                              //Square(s): Square) -> &ZobristHash {
     //return piece_keys[(384 * c) + ((p - 1) * 64) + s];
 //}
-static TABLE_SIZE : uint = 1048583; 
+const TABLE_SIZE : uint = 1048583; 
 
 pub struct Table{
-    table: [Entry, ..TABLE_SIZE]
+    table: [Entry; TABLE_SIZE]
 }
 
 impl Table {
     pub fn new() -> Table {
-        Table{ table: [NULL_ENTRY, ..TABLE_SIZE]}
+        Table{ table: [NULL_ENTRY; TABLE_SIZE]}
     }
 
     pub fn probe(&self, hash: ZobristHash, depth: uint, alpha: int, beta: int) -> (Option<int>, Move) {
@@ -115,7 +119,7 @@ impl Table {
 
     pub fn slots_filled(&self) -> int {
         let mut c = 0;
-        for i in range(0, TABLE_SIZE) {
+        for i in (0..TABLE_SIZE) {
             if self.table[i] != NULL_ENTRY {
                 c += 1;
             }
@@ -124,20 +128,20 @@ impl Table {
     }
 
     pub fn print_nonempty(&self) -> () {
-        for i in range(0, TABLE_SIZE) {
+        for i in (0..TABLE_SIZE) {
             if self.table[i] != NULL_ENTRY {
-                print!("{}\n", self.table[i]);
+                print!("{:?}\n", self.table[i]);
             }
         }
     }
 }
 
-#[deriving(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Copy)]
 pub struct Bound(uint);
 
-pub static ALPHA_BOUND : Bound = Bound(0);
-pub static BETA_BOUND : Bound = Bound(1);
-pub static EXACT_BOUND : Bound = Bound(2);
+pub const ALPHA_BOUND : Bound = Bound(0);
+pub const BETA_BOUND : Bound = Bound(1);
+pub const EXACT_BOUND : Bound = Bound(2);
 
 impl fmt::Show for Bound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -147,13 +151,13 @@ impl fmt::Show for Bound {
             EXACT_BOUND => "EXACT",
             _ => "NULL"
         };
-        return write!(f, "{}", s);
+        return write!(f, "{:?}", s);
     }
 }
 
 // [64 bits: zobrist]
 // [18 bits: padding] [1: ancient] [21: score] [2: bound] [16: best move] [8: depth] 
-#[deriving(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Copy)]
 struct Entry {
     zobrist: ZobristHash,
     data: u64
@@ -166,7 +170,7 @@ static NULL_ENTRY : Entry = Entry {
 
 impl fmt::Show for Entry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "Depth: {}, Move: {}, Score: {}, Bound: {}, Ancient: {}, Hash: {}", self.get_depth(), self.get_move(), self.get_score(), self.get_type(), self.get_ancient(), self.get_hash());
+        return write!(f, "Depth: {:?}, Move: {:?}, Score: {:?}, Bound: {:?}, Ancient: {:?}, Hash: {:?}", self.get_depth(), self.get_move(), self.get_score(), self.get_type(), self.get_ancient(), self.get_hash());
     }
 }
 
@@ -218,7 +222,7 @@ impl ZobristHash {
         return ZobristHash(0);
     }
 
-    pub fn init(pieces: [Piece, ..64],
+    pub fn init(pieces: [Piece; 64],
                 to_move: Color,
                 castling: u8, 
                 ep_square: Square)

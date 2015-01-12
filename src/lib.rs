@@ -1,4 +1,6 @@
 #![feature(asm)]
+#![feature(box_syntax)]
+
 pub mod bitboard;
 pub mod color;
 pub mod constants;
