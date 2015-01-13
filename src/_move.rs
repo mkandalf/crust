@@ -11,12 +11,15 @@ pub const NULL : Move = Move(0);
 pub struct Move(pub uint);
 
 impl Move {
+    #[inline(always)]
     pub fn new (Square(from):Square, Square(to):Square, attack: uint) -> Move {
         Move(to | from << 6 | (attack & 0x1) << 16)
     }
+    #[inline(always)]
     pub fn new_castle(Square(from):Square, Square(to):Square) -> Move {
         Move(to | from << 6 | (1 << 12))
     }
+    #[inline(always)]
     pub fn new_promotion(Square(from):Square, Square(to):Square, PieceType(p):PieceType, attack: uint) -> Move {
         Move(to | (from << 6) | ((p & 0x7) << 13) | ((attack & 0x1) << 16))
     }

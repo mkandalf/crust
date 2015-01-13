@@ -3,7 +3,7 @@ use std::fmt;
 
 use bitboard;
 use bitboard::{BitBoard, clear_bit, set_bit, bit_scan_forward, circular_left_shift, clear_lsb,
-in_between, no_we_one, so_we_one, no_ea_one, so_ea_one, from_pieces};
+in_between, no_we_one, so_we_one, no_ea_one, so_ea_one, filter_pieces};
 use color;
 use color::{Color, WHITE, BLACK};
 use constants;
@@ -68,31 +68,37 @@ impl Position {
 
         let to_move = if parts[1] == "w" { WHITE } else { BLACK };
 
-        let ep_square = if parts[3].chars().all(|c| c.is_alphanumeric()) { square::from_str(parts[3]).expect("fen failed") } else { square::NULL };
+        let ep_square =
+            if parts[3].chars().all(|c| c.is_alphanumeric()) {
+                square::from_str(parts[3]).expect("fen failed")
+            } else {
+                square::NULL
+            };
 
-        return Position {
-            occupied: from_pieces(board, |piece| to_type(piece) != NO_PIECE_TYPE),
+        let half_moves = FromStr::from_str(parts[4]).unwrap();
+
+        Position {
+            occupied: filter_pieces(board, |piece| to_type(piece) != NO_PIECE_TYPE),
             by_piece: [
-                from_pieces(board, |piece| to_type(piece) == NO_PIECE_TYPE),
-                from_pieces(board, |piece| to_type(piece) == PAWN),
-                from_pieces(board, |piece| to_type(piece) == KNIGHT),
-                from_pieces(board, |piece| to_type(piece) == BISHOP),
-                from_pieces(board, |piece| to_type(piece) == ROOK),
-                from_pieces(board, |piece| to_type(piece) == QUEEN),
-                from_pieces(board, |piece| to_type(piece) == KING),
+                filter_pieces_by_type(board, NO_PIECE_TYPE),
+                filter_pieces_by_type(board, PAWN),
+                filter_pieces_by_type(board, KNIGHT),
+                filter_pieces_by_type(board, BISHOP),
+                filter_pieces_by_type(board, ROOK),
+                filter_pieces_by_type(board, QUEEN),
+                filter_pieces_by_type(board, KING),
             ],
             board: board,
-            by_color: [from_pieces(board, |piece| to_color(piece) == WHITE && to_type(piece) != NO_PIECE_TYPE),
-                       from_pieces(board, |piece| to_color(piece) == BLACK && to_type(piece) != NO_PIECE_TYPE)],
+            by_color: [filter_pieces_by_color(board, WHITE), filter_pieces_by_color(board, BLACK)],
             to_move: to_move,
             castling_rights: castling_rights,
-            ep_square: if parts[3].chars().all(|c| c.is_alphanumeric()) { square::from_str(parts[3]).expect("fen failed") } else { square::NULL },
+            ep_square: ep_square,
             ep_square_hist: vec![],
             castling_hist: vec![],
             half_moves_hist: vec![],
             capture_hist: vec![],
             hash: ZobristHash::init(board, to_move, castling_rights, ep_square),
-            half_moves: FromStr::from_str(parts[4]).unwrap()
+            half_moves: half_moves
         }
     }
 
@@ -186,24 +192,21 @@ impl Position {
                     // Stop the check, either by blocking it or by capturing
                     let checker_sq = bit_scan_forward(checkers);
                     let checker_type = self.type_of_piece_on(checker_sq);
-                    if checker_type == KNIGHT {
-                        if to != checker_sq {
-                            return false;
-                        }
-                    } else if checker_type == PAWN {
-                        // There is no way to evade check from a pawn
-                        // without capturing it or moving the king
-                        if to != checker_sq {
-                            return false;
-                        }
-                    } else {
-                        // The move must block the check, otherwise return false
-                        let king_sq = bit_scan_forward(self.pieces(self.to_move, KING));
-                        let blocks = (bitboard::in_between(king_sq, checker_sq) & bitboard::single_bit(to))
-                                     != BitBoard(0);
-                        let captures = to == checker_sq;
-                        if !blocks & !captures {
-                            return false;
+                    match checker_type {
+                        KNIGHT | PAWN => {
+                            if to != checker_sq {
+                                return false;
+                            }
+                        },
+                        _ => {
+                            // The move must block the check, otherwise return false
+                            let king_sq = bit_scan_forward(self.pieces(self.to_move, KING));
+                            let blocks = (bitboard::in_between(king_sq, checker_sq) & bitboard::single_bit(to))
+                                         != BitBoard(0);
+                            let captures = to == checker_sq;
+                            if !blocks & !captures {
+                                return false;
+                            }
                         }
                     }
                 }
@@ -315,76 +318,81 @@ impl Position {
         self.hash.clear_ep(self.ep_square);
         let old_ep_square = self.ep_square;
         self.ep_square = square::NULL;
-        if piece == PAWN {
-            static SINGLE_PUSH_DIFFS : [uint; 2] = [64 - 8, 8];
+        match piece {
+            PAWN => {
+                static SINGLE_PUSH_DIFFS : [uint; 2] = [64 - 8, 8];
 
-            self.half_moves = 0;
+                self.half_moves = 0;
 
-            if square::abs_diff(to, from) == 16 {
-                // Double push, set ep square
-                self.ep_square = ((from + 64)
-                                  - SINGLE_PUSH_DIFFS[us_int])
-                                 % 64;
-            } else if to == old_ep_square {
-                // En passant
-                let target = Square::new(square::rank(from), square::file(to));
-                clear_bit(self.mut_pieces_of_type(PAWN), target);
-                clear_bit(self.mut_pieces_of_color(them), target);
-                clear_bit(&mut self.occupied, target);
-                set_bit(&mut self.by_piece[0], target);
-                self.set_piece_on(target, NP);
-                self.hash.clear_piece(PAWN, them, target);
-            } else if get_promotion(_move) != NO_PIECE_TYPE {
-                // Promotion
-                clear_bit(self.mut_pieces_of_type(piece), to);
-                self.set_piece_on(to, Piece::new(get_promotion(_move), us));
-                set_bit(self.mut_pieces_of_type(get_promotion(_move)), to);
-                self.hash.clear_piece(PAWN, us, to);
-                self.hash.set_piece(get_promotion(_move), us, to);
+                if square::abs_diff(to, from) == 16 {
+                    // Double push, set ep square
+                    self.ep_square = ((from + 64)
+                                      - SINGLE_PUSH_DIFFS[us_int])
+                                     % 64;
+                } else if to == old_ep_square {
+                    // En passant
+                    let target = Square::new(square::rank(from), square::file(to));
+                    clear_bit(self.mut_pieces_of_type(PAWN), target);
+                    clear_bit(self.mut_pieces_of_color(them), target);
+                    clear_bit(&mut self.occupied, target);
+                    set_bit(&mut self.by_piece[0], target);
+                    self.set_piece_on(target, NP);
+                    self.hash.clear_piece(PAWN, them, target);
+                } else if get_promotion(_move) != NO_PIECE_TYPE {
+                    // Promotion
+                    clear_bit(self.mut_pieces_of_type(piece), to);
+                    self.set_piece_on(to, Piece::new(get_promotion(_move), us));
+                    set_bit(self.mut_pieces_of_type(get_promotion(_move)), to);
+                    self.hash.clear_piece(PAWN, us, to);
+                    self.hash.set_piece(get_promotion(_move), us, to);
+                }
             }
-        } else if piece == KING {
-            if is_castle(_move) {
-                static ROOK_SQS : [[Square; 2]; 2] =
-                    [[Square(7), Square(0)], [Square(63), Square(56)]];
-                static ROOK_DESTS : [[Square; 2]; 2] =
-                    [[Square(5), Square(3)], [Square(61), Square(59)]];
-                let queenside_castle = square::file(to) == 2;
-                let rook_from = ROOK_SQS[us_int][queenside_castle as uint];
-                let rook_to = ROOK_DESTS[us_int][queenside_castle as uint];
+            KING => {
+                if is_castle(_move) {
+                    static ROOK_SQS : [[Square; 2]; 2] =
+                        [[Square(7), Square(0)], [Square(63), Square(56)]];
+                    static ROOK_DESTS : [[Square; 2]; 2] =
+                        [[Square(5), Square(3)], [Square(61), Square(59)]];
+                    let queenside_castle = square::file(to) == 2;
+                    let rook_from = ROOK_SQS[us_int][queenside_castle as uint];
+                    let rook_to = ROOK_DESTS[us_int][queenside_castle as uint];
 
-                let on_from = self.piece_on(rook_from);
+                    let on_from = self.piece_on(rook_from);
 
-                clear_bit(self.mut_pieces_of_type(ROOK), rook_from);
-                clear_bit(self.mut_pieces_of_color(us), rook_from);
-                clear_bit(&mut self.occupied, rook_from);
-                set_bit(&mut self.by_piece[0], rook_from);
-                self.set_piece_on(rook_from, NP);
-                self.hash.clear_piece(ROOK, us, rook_from);
+                    clear_bit(self.mut_pieces_of_type(ROOK), rook_from);
+                    clear_bit(self.mut_pieces_of_color(us), rook_from);
+                    clear_bit(&mut self.occupied, rook_from);
+                    set_bit(&mut self.by_piece[0], rook_from);
+                    self.set_piece_on(rook_from, NP);
+                    self.hash.clear_piece(ROOK, us, rook_from);
 
-                set_bit(self.mut_pieces_of_type(ROOK), rook_to);
-                set_bit(self.mut_pieces_of_color(us), rook_to);
-                set_bit(&mut self.occupied, rook_to);
-                clear_bit(&mut self.by_piece[0], rook_to);
-                self.set_piece_on(rook_to, on_from);
-                self.hash.set_piece(ROOK, us, rook_to);
-                // TODO should we just construct the rook piece here...
-            }
-            static CASTLING_RIGHTS_MASKS : [u8; 2] = [5, 10];
-            self.hash.clear_castling(self.castling_rights);
-            self.castling_rights &= !CASTLING_RIGHTS_MASKS[us_int];
-            self.hash.set_castling(self.castling_rights);
-        } else if piece == ROOK {
-            static ROOK_SQS : [[Square; 2]; 2] =
-                [[Square(7), Square(0)], [Square(63), Square(56)]];
-            // TODO: remove branch?
-            let curr_rook_sqs = ROOK_SQS[us_int];
-            if from == curr_rook_sqs[0] || from == curr_rook_sqs[1] {
-                let queenside_castle = from == curr_rook_sqs[1];
-                let idx = us_int | (if queenside_castle {2} else {0});
+                    set_bit(self.mut_pieces_of_type(ROOK), rook_to);
+                    set_bit(self.mut_pieces_of_color(us), rook_to);
+                    set_bit(&mut self.occupied, rook_to);
+                    clear_bit(&mut self.by_piece[0], rook_to);
+                    self.set_piece_on(rook_to, on_from);
+                    self.hash.set_piece(ROOK, us, rook_to);
+                    // TODO should we just construct the rook piece here...
+                }
+                static CASTLING_RIGHTS_MASKS : [u8; 2] = [5, 10];
                 self.hash.clear_castling(self.castling_rights);
-                self.castling_rights &= !(1 << idx);
+                self.castling_rights &= !CASTLING_RIGHTS_MASKS[us_int];
                 self.hash.set_castling(self.castling_rights);
             }
+            ROOK => {
+                static ROOK_SQS : [[Square; 2]; 2] =
+                    [[Square(7), Square(0)], [Square(63), Square(56)]];
+                // TODO: remove branch?
+                let curr_rook_sqs = ROOK_SQS[us_int];
+                if from == curr_rook_sqs[0] || from == curr_rook_sqs[1] {
+                    let queenside_castle = from == curr_rook_sqs[1];
+                    let idx = us_int | (if queenside_castle {2} else {0});
+                    self.hash.clear_castling(self.castling_rights);
+                    self.castling_rights &= !(1 << idx);
+                    self.hash.set_castling(self.castling_rights);
+                }
+            }
+            _  => { }
         }
         if capture == ROOK {
             static ROOK_SQS : [[Square; 2]; 2] =
@@ -952,6 +960,14 @@ fn king_attacks(Square(s): Square) -> BitBoard {
 
 fn knight_attacks(Square(s): Square) -> BitBoard {
     return constants::get_knight_moves()[s]
+}
+
+fn filter_pieces_by_type(pieces : [Piece; 64], piece_type: PieceType) -> BitBoard {
+    filter_pieces(pieces, |piece| to_type(piece) == piece_type)
+}
+
+fn filter_pieces_by_color(pieces : [Piece; 64], color: Color) -> BitBoard {
+    filter_pieces(pieces, |piece| to_color(piece) == color && to_type(piece) != NO_PIECE_TYPE)
 }
 
 

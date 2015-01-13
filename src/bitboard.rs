@@ -137,11 +137,12 @@ impl ops::Not for BitBoard {
     }
 }
 
+#[inline(always)]
 pub fn clear_lsb(BitBoard(b) : BitBoard) -> BitBoard {
     return BitBoard(b & (b - 1));
 }
 
-pub fn from_pieces<F: Fn(Piece) -> bool>(pieces : [Piece; 64], f:F) -> BitBoard {
+pub fn filter_pieces<F: Fn(Piece) -> bool>(pieces : [Piece; 64], f:F) -> BitBoard {
     let mut b = BitBoard(0);
     for x in pieces.iter() {
         b = b >> 1;
@@ -243,6 +244,7 @@ pub fn set_bit (bitboard: &mut BitBoard, Square(square): Square) -> () {
     *bitboard = BitBoard(board | (1 << square));
 }
 
+#[inline(always)]
 pub fn clear_bit (bitboard: &mut BitBoard, Square(square): Square) -> () {
     let BitBoard(board) = *bitboard;
     *bitboard = BitBoard(board & !(1 << square));

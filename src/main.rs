@@ -22,7 +22,6 @@ fn main() {
     use search::Searcher;
     use zobrist;
 
-
     // Initialize various constants, including magic bitboards
     constants::init();
     // Initialize zobrist keys
@@ -64,7 +63,7 @@ fn main() {
             }
         }
         searcher.pos.make_move(user_move);
-        let _move = searcher.search(0.75, true);
+        let _move = searcher.search(1.0, true);
         if _move == _move::NULL {
             print!("game over");
             break;

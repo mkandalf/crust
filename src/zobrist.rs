@@ -64,7 +64,7 @@ impl ops::Rem<u64> for ZobristHash {
 //}
 const TABLE_SIZE : uint = 1048583; 
 
-pub struct Table{
+pub struct Table {
     table: [Entry; TABLE_SIZE]
 }
 
@@ -78,16 +78,21 @@ impl Table {
         let entry: Entry = self.table[hash % TABLE_SIZE as u64];
         if entry != NULL_ENTRY && entry.get_hash() == hash {
             if entry.get_depth() >= depth {
-                if entry.get_type() == ALPHA_BOUND {
-                    if alpha >= entry.get_score() {
+                match entry.get_type() {
+                    ALPHA_BOUND =>  {
+                        if alpha >= entry.get_score() {
+                            return (Some(entry.get_score()), _move::NULL);
+                        }
+                    }
+                    BETA_BOUND => {
+                        if beta <= entry.get_score() {
+                            return (Some(entry.get_score()), _move::NULL);
+                        }
+                    }
+                    EXACT_BOUND => {
                         return (Some(entry.get_score()), _move::NULL);
                     }
-                } else if entry.get_type() == BETA_BOUND {
-                    if beta <= entry.get_score() {
-                        return (Some(entry.get_score()), _move::NULL);
-                    }
-                } else if entry.get_type() == EXACT_BOUND {
-                    return (Some(entry.get_score()), _move::NULL);
+                    _ => { }
                 }
             }
             let _move = entry.get_move();
