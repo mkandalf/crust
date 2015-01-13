@@ -92,19 +92,19 @@ impl ops::BitXor<BitBoard> for BitBoard {
     }
 }
 
-impl ops::Shr<uint> for BitBoard {
+impl ops::Shr<usize> for BitBoard {
     type Output = BitBoard;
 
-    fn shr (self, rhs : uint) -> BitBoard {
+    fn shr (self, rhs : usize) -> BitBoard {
         let BitBoard(lhs) = self;
         return BitBoard(lhs >> rhs);
     }
 }
 
-impl ops::Shl<uint> for BitBoard {
+impl ops::Shl<usize> for BitBoard {
     type Output = BitBoard;
 
-    fn shl (self, rhs : uint) -> BitBoard {
+    fn shl (self, rhs : usize) -> BitBoard {
         let BitBoard(lhs) = self;
         return BitBoard(lhs << rhs);
     }
@@ -189,16 +189,16 @@ pub fn single_bit(Square(s): Square) -> BitBoard {
 }
 
 #[inline(always)]
-pub fn circular_left_shift(BitBoard(b): BitBoard, shift: uint) -> BitBoard {
+pub fn circular_left_shift(BitBoard(b): BitBoard, shift: usize) -> BitBoard {
     return BitBoard(b << shift | b >> (64 - shift));
 }
 
 impl fmt::Show for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for rank in range_step(7, -1, -1 as int) {
+        for rank in range_step(7, -1, -1 as i8) {
             write!(f, "+---+---+---+---+---+---+---+---+\n");
             for file in range(0, 8) {
-                let square = Square::new(rank as uint, file);
+                let square = Square::new(rank as u8, file);
                 write!(f, "| {} ", if is_bit_set(*self, square) {'X'} else {' '});
             }
             write!(f, "|\n");
@@ -210,18 +210,18 @@ impl fmt::Show for BitBoard {
 #[inline(always)]
 pub fn bit_scan_forward(BitBoard(mask) : BitBoard) -> Square {
     unsafe {
-        let mut ret;
+        let mut ret : usize;
         asm!(
             "bsfq $1, $0"
             :"=r"(ret)
             :"r"(mask)
         );
-        return Square(ret);
+        return Square(ret as u8);
     }
 }
 
 #[inline(always)]
-pub fn popcnt(BitBoard(mask) : BitBoard) -> uint {
+pub fn popcnt(BitBoard(mask) : BitBoard) -> u64 {
     unsafe {
         let mut ret;
         asm!(
@@ -235,7 +235,7 @@ pub fn popcnt(BitBoard(mask) : BitBoard) -> uint {
 
 #[inline(always)]
 pub fn is_bit_set (BitBoard(board): BitBoard, Square(square): Square) -> bool {
-    ((1_u64 << square) & board) != 0
+    ((1u64 << square) & board) != 0
 }
 
 #[inline(always)]
@@ -252,5 +252,5 @@ pub fn clear_bit (bitboard: &mut BitBoard, Square(square): Square) -> () {
 
 #[inline(always)]
 pub fn in_between(Square(s1): Square, Square(s2): Square) -> BitBoard {
-    return constants::get_between_bb()[s1][s2];
+    return constants::get_between_bb()[s1 as usize][s2 as usize];
 }

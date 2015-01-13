@@ -5,7 +5,7 @@ use piece_type;
 use piece_type::PieceType;
 
 #[derive(PartialEq, Eq, Show, Copy)]
-pub struct Piece(pub uint);
+pub struct Piece(pub u8);
 
 pub static NP : Piece = Piece(0); // No Piece
 
@@ -25,7 +25,7 @@ pub static BK : Piece = Piece(14);
 
 impl Piece {
     pub fn new (PieceType(t): PieceType, Color(c): Color) -> Piece {
-        return Piece((c << 3) | t);
+        return Piece(((c << 3) | t) as u8);
     }
 }
 

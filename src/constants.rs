@@ -10,12 +10,12 @@ static mut rook_mob : [u8; 102400] = [0; 102400];
 static mut bishop_moves : [BitBoard; 5248] = [BitBoard(0); 5248];
 static mut bishop_mob : [u8; 5248] = [0; 5248];
 static mut between_bb : [[BitBoard; 64]; 64] = [[BitBoard(0); 64]; 64];
-pub static MAGIC_NUMBER_SHIFTS_ROOK : [uint; 64] =
+pub static MAGIC_NUMBER_SHIFTS_ROOK : [u8; 64] =
     [52,53,53,53,53,53,53,52,53,54,54,54,54,54,54,53,
      53,54,54,54,54,54,54,53,53,54,54,54,54,54,54,53,
      53,54,54,54,54,54,54,53,53,54,54,54,54,54,54,53,
      53,54,54,54,54,54,54,53,52,53,53,53,53,53,53,52];
-pub static MAGIC_NUMBER_SHIFTS_BISHOP : [uint; 64] =
+pub static MAGIC_NUMBER_SHIFTS_BISHOP : [u8; 64] =
     [58,59,59,59,59,59,59,58,59,59,59,59,59,59,59,
      59,59,59,57,57,57,57,59,59,59,59,57,55,55,57,
      59,59,59,59,57,55,55,57,59,59,59,59,57,57,57,
@@ -84,13 +84,13 @@ pub static OCCUPANCY_MASK_BISHOP : [u64; 64] =
      0x142240000000, 0x284402000000, 0x500804020000, 0x201008040200, 0x402010080400,
      0x2040810204000, 0x4081020400000, 0xa102040000000, 0x14224000000000, 0x28440200000000,
      0x50080402000000, 0x20100804020000, 0x40201008040200];
-pub static ROOK_INDEXES : [uint; 64] =
+pub static ROOK_INDEXES : [usize; 64] =
     [0, 4096, 6144, 8192, 10240, 12288, 14336, 16384, 20480, 22528, 23552, 24576, 25600, 26624,
     27648, 28672, 30720, 32768, 33792, 34816, 35840, 36864, 37888, 38912, 40960, 43008, 44032,
     45056, 46080, 47104, 48128, 49152, 51200, 53248, 54272, 55296, 56320, 57344, 58368, 59392,
     61440, 63488, 64512, 65536, 66560, 67584, 68608, 69632, 71680, 73728, 74752, 75776, 76800,
     77824, 78848, 79872, 81920, 86016, 88064, 90112, 92160, 94208, 96256, 98304];
-pub static BISHOP_INDEXES : [uint; 64] =
+pub static BISHOP_INDEXES : [usize; 64] =
     [0, 64, 96, 128, 160, 192, 224, 256, 320, 352, 384, 416, 448, 480, 512, 544, 576, 608, 640,
     768, 896, 1024, 1152, 1184, 1216, 1248, 1280, 1408, 1920, 2432, 2560, 2592, 2624, 2656, 2688,
     2816, 3328, 3840, 3968, 4000, 4032, 4064, 4096, 4224, 4352, 4480, 4608, 4640, 4672, 4704, 4736,
@@ -110,7 +110,7 @@ fn init_king_moves() -> () {
         let board = single_bit(Square(i));
         let moves = north_one(board) | south_one(board);
         unsafe {
-            king_moves[i] = moves | west_one(moves | board) | east_one(moves | board);
+            king_moves[i as usize] = moves | west_one(moves | board) | east_one(moves | board);
         }
     }
 }
@@ -127,7 +127,7 @@ fn init_knight_moves() -> () {
         moves = moves | north_one(east_east|west_west);
         moves = moves | south_one(east_east|west_west);
         unsafe {
-            knight_moves[i] = moves;
+            knight_moves[i as usize] = moves;
         }
     }
 }
@@ -157,8 +157,8 @@ fn init_between_bb() -> () {
 
 pub fn rook_moves_for_occ(sq: Square, b: BitBoard) -> BitBoard {
     let mut ret = BitBoard(0);
-    for i in range_step(file(sq) as int - 1, -1, -1 as int){
-        let add = single_bit(Square::new(rank(sq), i as uint));
+    for i in range_step(file(sq) as i8 - 1, -1, -1i8){
+        let add = single_bit(Square::new(rank(sq), i as u8));
         ret = ret | add;
         if b & add != BitBoard(0) { 
             break
@@ -178,8 +178,8 @@ pub fn rook_moves_for_occ(sq: Square, b: BitBoard) -> BitBoard {
             break
         }
     }
-    for i in range_step(rank(sq) as int - 1, -1, -1 as int){
-        let add = single_bit(Square::new(i as uint, file(sq)));
+    for i in range_step(rank(sq) as i8 - 1, -1, -1i8){
+        let add = single_bit(Square::new(i as u8, file(sq)));
         ret = ret | add;
         if b & add != BitBoard(0) { 
             break
@@ -238,11 +238,11 @@ fn init_rook_moves() -> () {
         let d: BitBoard = BitBoard(OCCUPANCY_MASK_ROOK[i]);
         let mut subset: BitBoard = BitBoard(0);
         loop {
-            let BitBoard(index) = (subset * MAGIC_NUMBER_ROOK[i]) >> MAGIC_NUMBER_SHIFTS_ROOK[i];
+            let BitBoard(index) = (subset * MAGIC_NUMBER_ROOK[i]) >> MAGIC_NUMBER_SHIFTS_ROOK[i] as usize;
             unsafe {
-                let moves = rook_moves_for_occ(Square(i), subset);
-                rook_moves[ROOK_INDEXES[i] + index as uint] = moves;
-                rook_mob[ROOK_INDEXES[i] + index as uint] = popcnt(moves) as u8;
+                let moves = rook_moves_for_occ(Square(i as u8), subset);
+                rook_moves[ROOK_INDEXES[i] + index as usize] = moves;
+                rook_mob[ROOK_INDEXES[i] + index as usize] = popcnt(moves) as u8;
             }
             subset = (subset - d) & d;
             if subset == BitBoard(0) { break };
@@ -255,11 +255,11 @@ fn init_bishop_moves() -> () {
         let d: BitBoard = BitBoard(OCCUPANCY_MASK_BISHOP[i]);
         let mut subset: BitBoard = BitBoard(0);
         loop {
-            let BitBoard(index) = (subset * MAGIC_NUMBER_BISHOP[i]) >> MAGIC_NUMBER_SHIFTS_BISHOP[i];
+            let BitBoard(index) = (subset * MAGIC_NUMBER_BISHOP[i]) >> MAGIC_NUMBER_SHIFTS_BISHOP[i] as usize;
             unsafe {
-                let moves = bishop_moves_for_occ(Square(i), subset);
-                bishop_moves[BISHOP_INDEXES[i] + index as uint] = moves;
-                bishop_mob[BISHOP_INDEXES[i] + index as uint] = popcnt(moves) as u8;
+                let moves = bishop_moves_for_occ(Square(i as u8), subset);
+                bishop_moves[BISHOP_INDEXES[i] + index as usize] = moves;
+                bishop_mob[BISHOP_INDEXES[i] + index as usize] = popcnt(moves) as u8;
             }
             subset = (subset - d) & d;
             if subset == BitBoard(0) { break };

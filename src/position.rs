@@ -40,18 +40,18 @@ impl Position {
         let parts: Vec<&str> = fen.split(' ').collect();
         assert!(parts.len() >= 5);
         assert!(parts[1] == "w" || parts[1] == "b");
-        let mut rank_idx: uint = 7;
+        let mut rank_idx: u8 = 7;
         let rank_strs: Vec<&str> = parts[0].split('/').collect();
         assert!(rank_strs.len() == 8);
         let mut board: [Piece; 64] = [NP; 64];
         for rank_str in rank_strs.iter() {
-            let mut file_idx: uint = 0;
+            let mut file_idx: u8 = 0;
             for c in rank_str.chars() {
                 if c.is_digit(10) {
-                    file_idx += c.to_digit(10).expect("");
+                    file_idx += c.to_digit(10).expect("") as u8;
                 } else if c.is_alphabetic() {
                     let color = if c.is_lowercase() { BLACK } else { WHITE };
-                    board[rank_idx * 8 + file_idx] = Piece::new(from_char(c.to_lowercase()).expect("fen failed"), color);
+                    board[(rank_idx * 8 + file_idx) as usize] = Piece::new(from_char(c.to_lowercase()).expect("fen failed"), color);
                     file_idx += 1;
                 }
             }
@@ -140,11 +140,11 @@ impl Position {
     }
 
     pub fn piece_on (&self, Square(square): Square) -> Piece {
-        self.board[square]
+        self.board[square as usize]
     }
 
     pub fn set_piece_on (&mut self, Square(square): Square, piece: Piece) -> () {
-        self.board[square] = piece;
+        self.board[square as usize] = piece;
     }
 
     pub fn type_of_piece_on (&self, square: Square) -> PieceType {
@@ -156,23 +156,23 @@ impl Position {
     }
 
     pub fn pieces_of_type (&self, PieceType(piece_type): PieceType) -> BitBoard {
-        self.by_piece[piece_type]
+        self.by_piece[piece_type as usize]
     }
 
     pub fn mut_pieces_of_type (&mut self, PieceType(piece_type): PieceType) -> &mut BitBoard {
-        &mut self.by_piece[piece_type]
+        &mut self.by_piece[piece_type as usize]
     }
 
     pub fn pieces_of_color (&self, Color(color): Color) -> BitBoard {
-        self.by_color[color]
+        self.by_color[color as usize]
     }
 
     pub fn mut_pieces_of_color (&mut self, Color(color): Color) -> &mut BitBoard {
-        &mut self.by_color[color]
+        &mut self.by_color[color as usize]
     }
 
     pub fn pieces (&self, Color(color): Color, PieceType(piece_type): PieceType) -> BitBoard {
-        self.by_piece[piece_type] & self.by_color[color]
+        self.by_piece[piece_type as usize] & self.by_color[color as usize]
     }
 
     pub fn move_is_legal(&mut self, _move: Move, pinned: BitBoard, checkers: BitBoard) -> bool {
@@ -222,7 +222,7 @@ impl Position {
                     [[[Square(5), Square(6)], [Square(3), Square(2)]],
                      [[Square(61), Square(62)], [Square(59), Square(58)]]]; 
                 let queenside_castle = square::file(to) == 2;
-                let sqs = CASTLE_SQS[color::to_int(self.to_move)][queenside_castle as uint];
+                let sqs = CASTLE_SQS[color::to_idx(self.to_move)][queenside_castle as usize];
                 let without_king = self.occupied ^ self.pieces(self.to_move, KING);
                 if self.attacks_for_occ(sqs[0], without_king) != BitBoard(0) {
                     return false;
@@ -232,7 +232,7 @@ impl Position {
                 let without_king_or_rook =
                     self.occupied
                     ^ bitboard::single_bit(
-                        ROOK_SQS[color::to_int(self.to_move)][queenside_castle as uint]
+                        ROOK_SQS[color::to_idx(self.to_move)][queenside_castle as usize]
                       );
                 if self.attacks_for_occ(sqs[1], without_king_or_rook) != BitBoard(0) {
                     return false;
@@ -252,8 +252,8 @@ impl Position {
         if to == self.ep_square && PieceType(piece) == PAWN {
             if (bitboard::single_bit(to) & pinned) != BitBoard(0) {
                 let king_sq = bit_scan_forward(self.pieces(self.to_move, KING));
-                static SINGLE_PUSH_DIFFS : [uint; 2] = [8, 64 - 8];
-                let target = ((from + 64) - SINGLE_PUSH_DIFFS[color::to_int(self.to_move)]) % 64;
+                static SINGLE_PUSH_DIFFS : [u8; 2] = [8, 64 - 8];
+                let target = ((from + 64) - SINGLE_PUSH_DIFFS[color::to_idx(self.to_move)]) % 64;
                 if ((bitboard::in_between(king_sq, target) & bitboard::single_bit(to))
                     | (bitboard::in_between(king_sq, to) & bitboard::single_bit(target)))
                    == BitBoard(0) {
@@ -281,9 +281,9 @@ impl Position {
         let to = get_to(_move);
 
         let us = self.to_move;
-        let Color(us_int) = us;
+        let us_int = color::to_idx(us);
         let them = color::flip(self.to_move);
-        let Color(them_int) = them;
+        let them_int = color::to_idx(them);
 
         let piece = self.type_of_piece_on(from);
         let capture = self.type_of_piece_on(to);
@@ -320,7 +320,7 @@ impl Position {
         self.ep_square = square::NULL;
         match piece {
             PAWN => {
-                static SINGLE_PUSH_DIFFS : [uint; 2] = [64 - 8, 8];
+                static SINGLE_PUSH_DIFFS : [u8; 2] = [64 - 8, 8];
 
                 self.half_moves = 0;
 
@@ -354,8 +354,8 @@ impl Position {
                     static ROOK_DESTS : [[Square; 2]; 2] =
                         [[Square(5), Square(3)], [Square(61), Square(59)]];
                     let queenside_castle = square::file(to) == 2;
-                    let rook_from = ROOK_SQS[us_int][queenside_castle as uint];
-                    let rook_to = ROOK_DESTS[us_int][queenside_castle as uint];
+                    let rook_from = ROOK_SQS[us_int][queenside_castle as usize];
+                    let rook_to = ROOK_DESTS[us_int][queenside_castle as usize];
 
                     let on_from = self.piece_on(rook_from);
 
@@ -432,9 +432,9 @@ impl Position {
         let to = get_to(_move);
 
         let us = self.to_move;
-        let us_int = color::to_int(us);
+        let us_int = color::to_idx(us);
         let them = color::flip(self.to_move);
-        let them_int = color::to_int(them);
+        let them_int = color::to_idx(them);
 
         let piece = self.type_of_piece_on(to);
         let capture = self.capture_hist.pop().unwrap();
@@ -468,8 +468,8 @@ impl Position {
             static ROOK_DESTS : [[Square; 2]; 2] =
                 [[Square(5), Square(3)], [Square(61), Square(59)]];
             let queenside_castle = square::file(to) == 2;
-            let rook_from = ROOK_SQS[us_int][queenside_castle as uint];
-            let rook_to = ROOK_DESTS[us_int][queenside_castle as uint];
+            let rook_from = ROOK_SQS[us_int][queenside_castle as usize];
+            let rook_to = ROOK_DESTS[us_int][queenside_castle as usize];
 
             let on_to = self.piece_on(rook_to);
 
@@ -563,14 +563,14 @@ impl Position {
         let king = self.pieces(self.to_move, KING);
         let from = bit_scan_forward(king);
         // O-O
-        let idx = color::to_int(self.to_move) | 0;
+        let idx = color::to_idx(self.to_move) | 0;
         if self.castling_rights & (1 << idx) != 0 {
             if MASKS[idx] & self.occupied == BitBoard(0) {
                 moves.push(Move::new_castle(from, TARGETS[idx]));
             }
         }
         // O-O-O
-        let idx = color::to_int(self.to_move) | 2;
+        let idx = color::to_idx(self.to_move) | 2;
         if self.castling_rights >> idx & 1 == 1 {
             if MASKS[idx] & self.occupied == BitBoard(0) {
                 moves.push(Move::new_castle(from, TARGETS[idx]));
@@ -703,32 +703,32 @@ impl Position {
         if !attacks_only {
             let empty = !self.occupied;
 
-            static SINGLE_PUSH_DIFFS : [uint; 2] = [8, 64 - 8];
-            let diff = SINGLE_PUSH_DIFFS[color::to_int(self.to_move)];
+            static SINGLE_PUSH_DIFFS : [u8; 2] = [8, 64 - 8];
+            let diff = SINGLE_PUSH_DIFFS[color::to_idx(self.to_move)];
             let single_pushes = 
-                circular_left_shift(pawns, diff)
+                circular_left_shift(pawns, diff as usize)
                 & empty;
-            let non_promotions = single_pushes & !PROMOTION_MASK[color::to_int(self.to_move)];
+            let non_promotions = single_pushes & !PROMOTION_MASK[color::to_idx(self.to_move)];
             self.add_pawn_moves(non_promotions, moves, diff);
 
-            let promotions = single_pushes & PROMOTION_MASK[color::to_int(self.to_move)];
+            let promotions = single_pushes & PROMOTION_MASK[color::to_idx(self.to_move)];
             self.add_pawn_promotions(promotions, moves, diff, 0);
 
             let double_push_mask = [bitboard::RANK_3, bitboard::RANK_6];
             let double_pushes = 
-                circular_left_shift(single_pushes & double_push_mask[color::to_int(self.to_move)], 
-                                    diff)
+                circular_left_shift(single_pushes & double_push_mask[color::to_idx(self.to_move)], 
+                                    diff as usize)
                 & empty;
             self.add_pawn_moves(double_pushes, moves, 2 * diff);
         }
 
-        static ATTACK_DIFFS : [[uint; 2]; 2] = [[7, 64-9], [9, 64-7]];
+        static ATTACK_DIFFS : [[u8; 2]; 2] = [[7, 64-9], [9, 64-7]];
         static FILE_MASKS : [BitBoard; 2] = [bitboard::NOT_FILE_H, bitboard::NOT_FILE_A];
         for i in 0..2 {
-            let diff = ATTACK_DIFFS[i][color::to_int(self.to_move)];
-            let targets = circular_left_shift(pawns, diff) & FILE_MASKS[i];
+            let diff = ATTACK_DIFFS[i][color::to_idx(self.to_move)];
+            let targets = circular_left_shift(pawns, diff as usize) & FILE_MASKS[i];
             let attack_moves = targets & self.pieces_of_color(color::flip(self.to_move));
-            let non_promotions = attack_moves & !PROMOTION_MASK[color::to_int(self.to_move)];
+            let non_promotions = attack_moves & !PROMOTION_MASK[color::to_idx(self.to_move)];
             self.add_pawn_attacks(non_promotions, moves, diff);
 
             if self.ep_square != square::NULL {
@@ -736,7 +736,7 @@ impl Position {
                 self.add_pawn_attacks(en_passant, moves, diff);
             }
 
-            let promotions = attack_moves & PROMOTION_MASK[color::to_int(self.to_move)];
+            let promotions = attack_moves & PROMOTION_MASK[color::to_idx(self.to_move)];
             self.add_pawn_promotions(promotions, moves, diff, 1);
         }
 
@@ -744,7 +744,7 @@ impl Position {
 
     // Attacks from a square by pawns of a given color
 
-    pub fn add_pawn_moves(&self, mut targets: BitBoard, moves: &mut Vec<Move>, diff: uint) -> () {
+    pub fn add_pawn_moves(&self, mut targets: BitBoard, moves: &mut Vec<Move>, diff: u8) -> () {
         let t = &mut targets;
         while *t != BitBoard(0) {
             let to = bit_scan_forward(*t);
@@ -755,7 +755,7 @@ impl Position {
         }
     }
 
-    pub fn add_pawn_attacks(&self, mut targets: BitBoard, moves: &mut Vec<Move>, diff: uint) -> () {
+    pub fn add_pawn_attacks(&self, mut targets: BitBoard, moves: &mut Vec<Move>, diff: u8) -> () {
         let t = &mut targets;
         while *t != BitBoard(0) {
             let to = bit_scan_forward(*t);
@@ -766,7 +766,7 @@ impl Position {
         }
     }
 
-    pub fn add_pawn_promotions(&self, mut targets: BitBoard, moves: &mut Vec<Move>, diff: uint, attack: uint) -> () {
+    pub fn add_pawn_promotions(&self, mut targets: BitBoard, moves: &mut Vec<Move>, diff: u8, attack: u64) -> () {
         let t = &mut targets;
         while *t != BitBoard(0) {
             let to = bit_scan_forward(*t);
@@ -804,19 +804,21 @@ impl Position {
         return pinned;
     }
 
-    fn rook_mob(occ: BitBoard, Square(i): Square) -> uint {
-        let occ = BitBoard(constants::OCCUPANCY_MASK_ROOK[i]) & occ;
-        let BitBoard(index) = (occ * constants::MAGIC_NUMBER_ROOK[i]) >> constants::MAGIC_NUMBER_SHIFTS_ROOK[i];
-        return constants::get_rook_mob()[constants::ROOK_INDEXES[i] + index as uint] as uint;
+    fn rook_mob(occ: BitBoard, Square(i): Square) -> u8 {
+        let sq_idx = i as usize;
+        let occ = BitBoard(constants::OCCUPANCY_MASK_ROOK[sq_idx]) & occ;
+        let BitBoard(index) = (occ * constants::MAGIC_NUMBER_ROOK[sq_idx]) >> constants::MAGIC_NUMBER_SHIFTS_ROOK[sq_idx] as usize;
+        return constants::get_rook_mob()[constants::ROOK_INDEXES[sq_idx] + index as usize];
     }
 
-    fn bishop_mob(occ: BitBoard, Square(i): Square) -> uint {
-        let occ = BitBoard(constants::OCCUPANCY_MASK_BISHOP[i]) & occ;
-        let BitBoard(index) = (occ * constants::MAGIC_NUMBER_BISHOP[i]) >> constants::MAGIC_NUMBER_SHIFTS_BISHOP[i];
-        return constants::get_bishop_mob()[constants::BISHOP_INDEXES[i] + index as uint] as uint;
+    fn bishop_mob(occ: BitBoard, Square(i): Square) -> u8 {
+        let sq_idx = i as usize;
+        let occ = BitBoard(constants::OCCUPANCY_MASK_BISHOP[sq_idx]) & occ;
+        let BitBoard(index) = (occ * constants::MAGIC_NUMBER_BISHOP[sq_idx]) >> constants::MAGIC_NUMBER_SHIFTS_BISHOP[sq_idx] as usize;
+        return constants::get_bishop_mob()[constants::BISHOP_INDEXES[sq_idx] + index as usize];
     }
 
-    pub fn evaluation(&self) -> int {
+    pub fn evaluation(&self) -> i16 {
         use bitboard::popcnt;
         static PAWN_TABLE : [i8; 64] = [
             0,  0,  0,  0,  0,  0,  0,  0,
@@ -848,12 +850,12 @@ impl Position {
             -10,  5,  0,  0,  0,  0,  5,-10,
             -20,-10,-40,-10,-10,-40,-10,-20,
         ];
-        static PAWN_WEIGHT : int = 100;
-        static KNIGHT_WEIGHT : int = 350;
-        static BISHOP_WEIGHT : int = 350;
-        static ROOK_WEIGHT : int = 525;
-        static QUEEN_WEIGHT : int = 1050;
-        static KING_WEIGHT : int = 20000;
+        static PAWN_WEIGHT : i16 = 100;
+        static KNIGHT_WEIGHT : i16 = 350;
+        static BISHOP_WEIGHT : i16 = 350;
+        static ROOK_WEIGHT : i16 = 525;
+        static QUEEN_WEIGHT : i16 = 1050;
+        static KING_WEIGHT : i16 = 20000;
 
         if self.half_moves >= 100 {
             // Check if there are any legal moves, as checkmate takes precedent
@@ -871,50 +873,50 @@ impl Position {
         let queens = self.pieces_of_type(QUEEN);
         let kings = self.pieces_of_type(KING);
 
-        let pawn_diff = popcnt(pawns & white) as int - popcnt(pawns & black) as int;
-        let knight_diff = popcnt(knights & white) as int - popcnt(knights & black) as int;
-        let bishop_diff = popcnt(bishops & white) as int - popcnt(bishops & black) as int;
-        let rook_diff = popcnt(rooks & white) as int - popcnt(rooks & black) as int;
-        let queen_diff = popcnt(queens & white) as int - popcnt(queens & black) as int;
-        let king_diff = popcnt(kings & white) as int - popcnt(kings & black) as int;
+        let pawn_diff = popcnt(pawns & white) as i16 - popcnt(pawns & black) as i16;
+        let knight_diff = popcnt(knights & white) as i16 - popcnt(knights & black) as i16;
+        let bishop_diff = popcnt(bishops & white) as i16 - popcnt(bishops & black) as i16;
+        let rook_diff = popcnt(rooks & white) as i16 - popcnt(rooks & black) as i16;
+        let queen_diff = popcnt(queens & white) as i16 - popcnt(queens & black) as i16;
+        let king_diff = popcnt(kings & white) as i16 - popcnt(kings & black) as i16;
 
         let mut targets = pawns & white;
-        let mut pawn_sqs: int = 0;
+        let mut pawn_sqs: i16 = 0;
         while targets != BitBoard(0) {
             let Square(pawn) = bit_scan_forward(targets);
-            pawn_sqs += PAWN_TABLE[63 - pawn] as int;
+            pawn_sqs += PAWN_TABLE[63 - pawn as usize] as i16;
             targets = clear_lsb(targets);
         }
         let mut targets = pawns & black;
         while targets != BitBoard(0) {
             let Square(pawn) = bit_scan_forward(targets);
-            pawn_sqs -= PAWN_TABLE[pawn] as int;
+            pawn_sqs -= PAWN_TABLE[pawn as usize] as i16;
             targets = clear_lsb(targets);
         }
         let mut targets = knights & white;
-        let mut knight_sqs: int = 0;
+        let mut knight_sqs: i16 = 0;
         while targets != BitBoard(0) {
             let Square(night) = bit_scan_forward(targets);
-            knight_sqs += KNIGHT_TABLE[63 - night] as int;
+            knight_sqs += KNIGHT_TABLE[63 - night as usize] as i16;
             targets = clear_lsb(targets);
         }
         let mut targets = knights & black;
         while targets != BitBoard(0) {
             let Square(night) = bit_scan_forward(targets);
-            knight_sqs -= KNIGHT_TABLE[night] as int;
+            knight_sqs -= KNIGHT_TABLE[night as usize] as i16;
             targets = clear_lsb(targets);
         }
         let mut targets = bishops & white;
-        let mut bishop_sqs: int = 0;
+        let mut bishop_sqs: i16 = 0;
         while targets != BitBoard(0) {
             let Square(bishop) = bit_scan_forward(targets);
-            bishop_sqs += BISHOP_TABLE[63 - bishop] as int;
+            bishop_sqs += BISHOP_TABLE[63 - bishop as usize] as i16;
             targets = clear_lsb(targets);
         }
         let mut targets = bishops & black;
         while targets != BitBoard(0) {
             let Square(bishop) = bit_scan_forward(targets);
-            bishop_sqs -= BISHOP_TABLE[bishop] as int;
+            bishop_sqs -= BISHOP_TABLE[bishop as usize] as i16;
             targets = clear_lsb(targets);
         }
 
@@ -927,8 +929,8 @@ impl Position {
                     + pawn_sqs
                     + knight_sqs
                     + bishop_sqs;
-        static TO_MOVE_ARR : [int; 2] = [1, -1];
-        return score * TO_MOVE_ARR[color::to_int(self.to_move)];
+        static TO_MOVE_ARR : [i16; 2] = [1, -1];
+        return score * TO_MOVE_ARR[color::to_idx(self.to_move)];
     }
 }
 
@@ -943,23 +945,25 @@ pub fn x_ray_bishop_attacks(occ: BitBoard, blockers: BitBoard, sq: Square) -> Bi
 }
 
 fn rook_attacks(occ: BitBoard, Square(i): Square) -> BitBoard {
-    let occ = BitBoard(constants::OCCUPANCY_MASK_ROOK[i]) & occ;
-    let BitBoard(index) = (occ * constants::MAGIC_NUMBER_ROOK[i]) >> constants::MAGIC_NUMBER_SHIFTS_ROOK[i];
-    return constants::get_rook_moves()[constants::ROOK_INDEXES[i] + index as uint]
+    let sq_idx = i as usize;
+    let occ = BitBoard(constants::OCCUPANCY_MASK_ROOK[sq_idx]) & occ;
+    let BitBoard(index) = (occ * constants::MAGIC_NUMBER_ROOK[sq_idx]) >> constants::MAGIC_NUMBER_SHIFTS_ROOK[sq_idx] as usize;
+    return constants::get_rook_moves()[constants::ROOK_INDEXES[sq_idx] + index as usize]
 }
 
 fn bishop_attacks(occ: BitBoard, Square(i): Square) -> BitBoard {
-    let occ = BitBoard(constants::OCCUPANCY_MASK_BISHOP[i]) & occ;
-    let BitBoard(index) = (occ * constants::MAGIC_NUMBER_BISHOP[i]) >> constants::MAGIC_NUMBER_SHIFTS_BISHOP[i];
-    return constants::get_bishop_moves()[constants::BISHOP_INDEXES[i] + index as uint];
+    let sq_idx = i as usize;
+    let occ = BitBoard(constants::OCCUPANCY_MASK_BISHOP[sq_idx]) & occ;
+    let BitBoard(index) = (occ * constants::MAGIC_NUMBER_BISHOP[sq_idx]) >> constants::MAGIC_NUMBER_SHIFTS_BISHOP[sq_idx] as usize;
+    return constants::get_bishop_moves()[constants::BISHOP_INDEXES[sq_idx] + index as usize];
 }
 
 fn king_attacks(Square(s): Square) -> BitBoard {
-    return constants::get_king_moves()[s]
+    return constants::get_king_moves()[s as usize]
 }
 
 fn knight_attacks(Square(s): Square) -> BitBoard {
-    return constants::get_knight_moves()[s]
+    return constants::get_knight_moves()[s as usize]
 }
 
 fn filter_pieces_by_type(pieces : [Piece; 64], piece_type: PieceType) -> BitBoard {
@@ -980,7 +984,7 @@ fn pawn_attacks(s : Square, c: Color) -> BitBoard {
     }
 }
 
-pub fn perft(position: &mut Position, depth: int) -> uint {
+pub fn perft(position: &mut Position, depth: u8) -> u64 {
     let moves = position.gen_moves(false);
     let mut count = 0;
     let pinned = position.pinned_pieces();
@@ -1003,7 +1007,7 @@ pub fn perft(position: &mut Position, depth: int) -> uint {
     return count;
 }
 
-pub fn divide(position: &mut Position, depth: int) -> HashMap<Move, uint> {
+pub fn divide(position: &mut Position, depth: u8) -> HashMap<Move, u64> {
     let pinned = position.pinned_pieces();
     let checkers = position.checkers();
     let moves = position.gen_moves(false);
@@ -1026,7 +1030,7 @@ pub fn divide(position: &mut Position, depth: int) -> HashMap<Move, uint> {
     return res;
 }
 
-pub fn print_divide(position: &mut Position, depth: int) -> () {
+pub fn print_divide(position: &mut Position, depth: u8) -> () {
     let res =  divide(position, depth);
     let mut keys: Vec<&Move> = res.keys().collect();
     keys.sort_by(|a, b| a.cmp(b));
@@ -1038,10 +1042,10 @@ pub fn print_divide(position: &mut Position, depth: int) -> () {
 impl fmt::Show for Position {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use std::iter::range_step;
-        for rank in range_step(7, -1, -1 as int) {
+        for rank in range_step(7, -1, -1 as i8) {
             write!(f, "+---+---+---+---+---+---+---+---+\n");
             for file in 0..8 {
-                let square = Square(file | ((rank as uint) << 3));
+                let square = Square(file | ((rank as u8) << 3));
                 write!(f, "| {} ", piece::to_char(self.piece_on(square)));
             }
             write!(f, "|\n");

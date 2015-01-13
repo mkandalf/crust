@@ -5,27 +5,28 @@ use _move::Move;
 use piece_type::PieceType;
 use position::Position;
 use zobrist::{Table, EXACT_BOUND, ALPHA_BOUND, BETA_BOUND};
+use std::i16;
 
 // Aspiration window parameter
-static WINDOW : int = 50;
+static WINDOW : i16 = 50;
 
 pub struct Searcher {
-    pub quiescent_node_count : uint,
-    pub node_count : uint,
+    pub quiescent_node_count : u64,
+    pub node_count : u64,
     pub pos: Box<Position>,
     pub table: Box<Table>,
     pub killers: [[Move; 2]; 32],
-    pub ancient: uint
+    pub ancient: u8
 }
 
-fn move_delta(_move: Move, pos: &Box<Position>) -> int {
-    static WEIGHTS : [int; 7] = [0, 100, 350, 350, 525, 1000, 20000];
+fn move_delta(_move: Move, pos: &Box<Position>) -> i16 {
+    static WEIGHTS : [i16; 7] = [0, 100, 350, 350, 525, 1000, 20000];
     let PieceType(from) = pos.type_of_piece_on(_move::get_from(_move));
     let PieceType(to) = pos.type_of_piece_on(_move::get_to(_move));
     if _move::get_to(_move) == pos.ep_square {
         return 0;
     } else {
-        return WEIGHTS[to] - WEIGHTS[from];
+        return WEIGHTS[to as usize] - WEIGHTS[from as usize];
     }
 }
 
@@ -41,17 +42,17 @@ impl Searcher {
         }
     }
 
-    fn set_killer(&mut self, _move: Move, ply: uint) -> () {
-        if self.killers[ply][0] != _move::NULL {
-            self.killers[ply][1] = self.killers[ply][0];
+    fn set_killer(&mut self, _move: Move, ply: u8) -> () {
+        if self.killers[ply as usize][0] != _move::NULL {
+            self.killers[ply as usize][1] = self.killers[ply as usize][0];
         }
-        self.killers[ply][0] = _move;
+        self.killers[ply as usize][0] = _move;
     }
 
-    pub fn alphabeta(&mut self, alpha: int, beta: int, depth: uint, ply: uint) -> int {
+    pub fn alphabeta(&mut self, alpha: i16, beta: i16, depth: u8, ply: u8) -> i16 {
         self.node_count += 1;
 
-        let (score, best_move): (Option<int>, Move) = self.table.probe(self.pos.hash, depth, alpha, beta);
+        let (score, best_move): (Option<i16>, Move) = self.table.probe(self.pos.hash, depth, alpha, beta);
         match score {
             Some(s) => return s,
             None => ()
@@ -62,14 +63,13 @@ impl Searcher {
             return score;
         }
 
-
         let pinned = self.pos.pinned_pieces();
         let checkers = self.pos.checkers();
 
         let mut alpha = alpha;
         let mut best = _move::NULL;
 
-        let [killer_move_one, killer_move_two] = self.killers[ply];
+        let [killer_move_one, killer_move_two] = self.killers[ply as usize];
         let mut moves = self.pos.gen_moves(false);
 
         for _move in moves.iter_mut() {
@@ -107,7 +107,7 @@ impl Searcher {
         return alpha;
     }
 
-    pub fn quiesce(&mut self, alpha: int, beta: int) -> int {
+    pub fn quiesce(&mut self, alpha: i16, beta: i16) -> i16 {
         self.quiescent_node_count += 1;
         self.node_count += 1;
 
@@ -143,11 +143,11 @@ impl Searcher {
         return alpha;
     }
 
-    pub fn root_alpha_beta(&mut self, alpha: int, beta: int, depth: uint) -> (Move, int) {
+    pub fn root_alpha_beta(&mut self, alpha: i16, beta: i16, depth: u8) -> (Move, i16) {
         self.quiescent_node_count = 0;
         self.node_count = 0;
 
-        let mut alpha: int = alpha;
+        let mut alpha: i16 = alpha;
 
         if depth == 0 { 
             debug_assert!(false, "Root alpha beta with depth 0");
@@ -165,6 +165,7 @@ impl Searcher {
             if self.pos.move_is_legal(*_move, pinned, checkers) {
                 self.pos.make_move(*_move);
                 let score = -self.alphabeta(-beta, -alpha, depth - 1, 1);
+                let eval = self.pos.evaluation();
                 self.pos.unmake_move(*_move);
                 if score > alpha {
                     best = *_move;
@@ -181,14 +182,14 @@ impl Searcher {
         self.ancient = self.ancient ^ 0x1;
         let time = time::precise_time_s();
         let mut i = 1;
-        let mut alpha: int = -1000000;
-        let mut beta: int = 1000000;
+        let mut alpha: i16 = i16::MIN + 1;
+        let mut beta: i16 = i16::MAX - 1;
         loop {
             let (_move, score) = self.root_alpha_beta(alpha, beta, i);
             let (_move, score) =
                 if score <= alpha || score >= beta {
-                    alpha = -1000000;
-                    beta = 1000000;
+                    alpha = i16::MIN + 1;
+                    beta = i16::MAX - 1;
                     self.root_alpha_beta(alpha, beta, i)
                 } else {
                     (_move, score)
@@ -209,17 +210,17 @@ impl Searcher {
         }
     }
 
-    pub fn search_depth(&mut self, depth: uint, print: bool) -> Move {
+    pub fn search_depth(&mut self, depth: u8, print: bool) -> Move {
         self.ancient = self.ancient ^ 0x1;
         let mut i = 1;
-        let mut alpha: int = -1000000;
-        let mut beta: int = 1000000;
+        let mut alpha: i16 = i16::MIN + 1;
+        let mut beta: i16 = i16::MAX - 1;
         loop {
             let (_move, score) = self.root_alpha_beta(alpha, beta, i);
             let (_move, score) =
                 if score <= alpha || score >= beta {
-                    alpha = -1000000;
-                    beta = 1000000;
+                    alpha = i16::MIN + 1;
+                    beta = i16::MAX - 1;
                     self.root_alpha_beta(alpha, beta, i)
                 } else {
                     (_move, score)

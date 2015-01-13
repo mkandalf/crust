@@ -18,7 +18,7 @@ fn main() {
 
     use constants;
     use _move;
-    use position::Position;
+    use position::{Position, perft};
     use search::Searcher;
     use zobrist;
 
@@ -28,6 +28,8 @@ fn main() {
     zobrist::init();
 
     let board = Position::new();
+    let mut perftboard = Position::new();
+    println!("{}", perft(&mut perftboard, 6));
     let mut reader = io::stdin();
     let mut searcher = Searcher::new(board);
 
@@ -63,7 +65,7 @@ fn main() {
             }
         }
         searcher.pos.make_move(user_move);
-        let _move = searcher.search(1.0, true);
+        let _move = searcher.search(0.75, true);
         if _move == _move::NULL {
             print!("game over");
             break;

@@ -8,30 +8,30 @@ use std::cmp::Ordering::{self, Less, Equal, Greater};
 pub const NULL : Move = Move(0);
 
 #[derive(Eq, Hash, PartialOrd, Copy, Clone)]
-pub struct Move(pub uint);
+pub struct Move(pub u64);
 
 impl Move {
     #[inline(always)]
-    pub fn new (Square(from):Square, Square(to):Square, attack: uint) -> Move {
-        Move(to | from << 6 | (attack & 0x1) << 16)
+    pub fn new (Square(from):Square, Square(to):Square, attack: u64) -> Move {
+        Move(to as u64 | (from as u64) << 6 | (attack & 0x1) << 16)
     }
     #[inline(always)]
     pub fn new_castle(Square(from):Square, Square(to):Square) -> Move {
-        Move(to | from << 6 | (1 << 12))
+        Move(to as u64 | (from as u64) << 6 | (1 << 12))
     }
     #[inline(always)]
-    pub fn new_promotion(Square(from):Square, Square(to):Square, PieceType(p):PieceType, attack: uint) -> Move {
-        Move(to | (from << 6) | ((p & 0x7) << 13) | ((attack & 0x1) << 16))
+    pub fn new_promotion(Square(from):Square, Square(to):Square, PieceType(p):PieceType, attack: u64) -> Move {
+        Move(to as u64 | (from as u64) << 6 | ((p as u64 & 0x7) << 13) | ((attack & 0x1) << 16))
     }
 
-    pub fn set_score(&mut self, score: int) -> () {
+    pub fn set_score(&mut self, score: i16) -> () {
         let Move(m) = *self;
-        *self = Move(m | ((score as i16 as u16 as uint) << 17));
+        *self = Move(m | ((score as i16 as u16 as u64) << 17));
     }
 
-    pub fn get_score(&self) -> int {
+    pub fn get_score(&self) -> i16 {
         let Move(m) = *self;
-        return ((m >> 17) & 0xffff) as u16 as i16 as int;
+        return ((m >> 17) & 0xffff) as u16 as i16;
     }
 }
 
@@ -92,20 +92,20 @@ pub fn from_str (s: &str) -> Option<Move> {
     }
 }
 
-pub fn to_int (Move(m): Move) -> uint {
+pub fn to_int (Move(m): Move) -> u64 {
     return m;
 }
 
 pub fn get_to (Move(m): Move) -> Square {
-    Square(m & 0x3f)
+    Square((m & 0x3f) as u8)
 }
 
 pub fn get_from (Move(m): Move) -> Square {
-    Square((m >> 6) & 0x3f)
+    Square(((m >> 6) & 0x3f) as u8)
 }
 
 pub fn get_promotion (Move(m): Move) -> PieceType {
-    PieceType((m >> 13) & 7)
+    PieceType(((m >> 13) & 7) as u8)
 }
 
 pub fn is_castle (Move(m): Move) -> bool {

@@ -18,7 +18,7 @@ static mut black_key : ZobristHash = ZobristHash(0);
 
 pub fn init() -> () {
     use std::rand::{SeedableRng, StdRng, Rng};
-    let mut rng: StdRng = SeedableRng::from_seed([1u].as_slice());
+    let mut rng: StdRng = SeedableRng::from_seed([1us].as_slice());
     for i in 0..768 {
         unsafe {
             piece_keys[i] = ZobristHash(rng.gen::<u64>());
@@ -48,12 +48,12 @@ impl ops::BitXor<ZobristHash> for ZobristHash {
     }
 }
 
-impl ops::Rem<u64> for ZobristHash {
-    type Output = uint;
+impl ops::Rem<usize> for ZobristHash {
+    type Output = usize;
 
-    fn rem (self, rhs: u64) -> uint {
+    fn rem (self, rhs: usize) -> usize {
         let ZobristHash(lhs) = self;
-        return (lhs % rhs) as uint;
+        return (lhs as usize % rhs);
     }
 }
 
@@ -62,7 +62,7 @@ impl ops::Rem<u64> for ZobristHash {
                              //Square(s): Square) -> &ZobristHash {
     //return piece_keys[(384 * c) + ((p - 1) * 64) + s];
 //}
-const TABLE_SIZE : uint = 1048583; 
+const TABLE_SIZE : usize = 1048583; 
 
 pub struct Table {
     table: [Entry; TABLE_SIZE]
@@ -73,9 +73,9 @@ impl Table {
         Table{ table: [NULL_ENTRY; TABLE_SIZE]}
     }
 
-    pub fn probe(&self, hash: ZobristHash, depth: uint, alpha: int, beta: int) -> (Option<int>, Move) {
+    pub fn probe(&self, hash: ZobristHash, depth: u8, alpha: i16, beta: i16) -> (Option<i16>, Move) {
         use _move;
-        let entry: Entry = self.table[hash % TABLE_SIZE as u64];
+        let entry: Entry = self.table[hash % TABLE_SIZE];
         if entry != NULL_ENTRY && entry.get_hash() == hash {
             if entry.get_depth() >= depth {
                 match entry.get_type() {
@@ -103,7 +103,7 @@ impl Table {
 
     pub fn best_move(&self, hash: ZobristHash) -> Option<Move> {
         use _move;
-        let entry: Entry = self.table[hash % TABLE_SIZE as u64];
+        let entry: Entry = self.table[hash % TABLE_SIZE];
         if entry != NULL_ENTRY && entry.get_hash() == hash {
             let _move = entry.get_move();
             match _move {
@@ -115,14 +115,14 @@ impl Table {
         }
     }
 
-    pub fn record(&mut self, hash: ZobristHash, score: int, _move: Move, depth: uint, bound: Bound, ancient: uint) -> () {
-        let entry: Entry = self.table[hash % TABLE_SIZE as u64];
+    pub fn record(&mut self, hash: ZobristHash, score: i16, _move: Move, depth: u8, bound: Bound, ancient: u8) -> () {
+        let entry: Entry = self.table[hash % TABLE_SIZE];
         if depth >= entry.get_depth() || (entry.get_ancient() != ancient && entry.get_hash() != hash) {
-            self.table[hash % TABLE_SIZE as u64] = Entry::new(hash, score, _move, depth, bound, ancient);
+            self.table[hash % TABLE_SIZE] = Entry::new(hash, score, _move, depth, bound, ancient);
         }
     }
 
-    pub fn slots_filled(&self) -> int {
+    pub fn slots_filled(&self) -> u64 {
         let mut c = 0;
         for i in (0..TABLE_SIZE) {
             if self.table[i] != NULL_ENTRY {
@@ -142,7 +142,7 @@ impl Table {
 }
 
 #[derive(Eq, PartialEq, Copy)]
-pub struct Bound(uint);
+pub struct Bound(u8);
 
 pub const ALPHA_BOUND : Bound = Bound(0);
 pub const BETA_BOUND : Bound = Bound(1);
@@ -180,35 +180,35 @@ impl fmt::Show for Entry {
 }
 
 impl Entry {
-    fn new(hash: ZobristHash, score: int, Move(m): Move, depth: uint, Bound(b): Bound, ancient: uint) -> Entry {
+    fn new(hash: ZobristHash, score: i16, Move(m): Move, depth: u8, Bound(b): Bound, ancient: u8) -> Entry {
         Entry {
             zobrist: hash,
-            data: ((depth & 0xff)
-                   | ((m & 0xffff) << 8)
-                   | ((b & 0x3) << 24)
-                   | ((score as i32 as u32 as uint) << 26)
-                   | ((ancient & 0x1) << 58)) as u64
+            data: ((depth as u64 & 0xff)
+                   | ((m as u64 & 0xffff) << 8)
+                   | ((b as u64 & 0x3) << 24)
+                   | ((score as i16 as u16 as u64) << 26)
+                   | ((ancient as u64 & 0x1) << 42))
         }
     }
 
-    fn get_depth(&self) -> uint {
-        return (self.data & 0xff) as uint;
+    fn get_depth(&self) -> u8 {
+        return (self.data & 0xff) as u8;
     }
 
     fn get_move(&self) -> Move {
-        return Move(((self.data >> 8) & 0xffff) as uint);
+        return Move(((self.data >> 8) & 0xffff) as u64);
     }
 
     fn get_type(&self) -> Bound {
-        return Bound(((self.data >> 24) & 0x3) as uint);
+        return Bound(((self.data >> 24) & 0x3) as u8);
     }
 
-    fn get_score(&self) -> int {
-        return ((self.data >> 26) & 0xffffffff) as u32 as i32 as int;
+    fn get_score(&self) -> i16 {
+        return ((self.data >> 26) & 0xffffffff) as u16 as i16 as i16;
     }
 
-    fn get_ancient(&self) -> uint {
-        return ((self.data >> 58) & 0x1) as uint;
+    fn get_ancient(&self) -> u8 {
+        return ((self.data >> 42) & 0x1) as u8;
     }
 
     fn get_hash(&self) -> ZobristHash {
@@ -268,7 +268,7 @@ impl ZobristHash {
         debug_assert!(c == 0 || c == 1);
         debug_assert!(s <= 63);
         unsafe {
-            *self = *self ^ piece_keys[(384 * c) + ((p - 1) * 64) + s];
+            *self = *self ^ piece_keys[((384 * c as usize) + ((p as usize - 1) * 64) + s as usize)];
         }
         //*self = self ^ get_hash_for_piece_square(p, c, s);
     }
@@ -279,7 +279,7 @@ impl ZobristHash {
                      Square(s): Square)
                      -> () {
         unsafe {
-            *self = *self ^ piece_keys[(384 * c) + ((p - 1) * 64) + s];
+            *self = *self ^ piece_keys[((384 * c as usize) + ((p as usize - 1) * 64) + s as usize)];
         }
         //*self = self ^ get_hash_for_piece_square(p, c, s);
     }
@@ -287,14 +287,14 @@ impl ZobristHash {
     pub fn clear_ep(&mut self, s: Square) -> () {
         use square::file;
         unsafe {
-            *self = *self ^ ep_keys[file(s)];
+            *self = *self ^ ep_keys[file(s) as usize];
         }
     }
 
     pub fn set_ep(&mut self, s: Square) -> () {
         use square::file;
         unsafe {
-            *self = *self ^ ep_keys[file(s)];
+            *self = *self ^ ep_keys[file(s) as usize];
         }
     }
 
@@ -306,13 +306,13 @@ impl ZobristHash {
 
     pub fn clear_castling(&mut self, castling: u8) -> () {
         unsafe {
-            *self = *self ^ castle_keys[castling as uint];
+            *self = *self ^ castle_keys[castling as usize];
         }
     }
 
     pub fn set_castling(&mut self, castling: u8) -> () {
         unsafe {
-            *self = *self ^ castle_keys[castling as uint];
+            *self = *self ^ castle_keys[castling as usize];
         }
     }
 }
