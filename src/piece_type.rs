@@ -1,5 +1,5 @@
 #[derive(PartialEq, Eq, Show, Copy)]
-pub struct PieceType(pub uint);
+pub struct PieceType(pub u8);
 
 pub const NO_PIECE_TYPE : PieceType = PieceType(0);
 pub const PAWN : PieceType = PieceType(1);
@@ -15,12 +15,12 @@ static CHAR_PIECE_TYPES : [Option<PieceType>; 26] =
      Some(KNIGHT), None, Some(PAWN), Some(QUEEN), Some(ROOK), None, None, None, None, None, None, None, None];
 
 pub fn to_char (PieceType(piece_type): PieceType) -> char {
-    PIECE_TYPE_CHARS[piece_type]
+    PIECE_TYPE_CHARS[piece_type as usize]
 }
 
 // from a lowercase char
 pub fn from_char (c: char) -> Option<PieceType> {
     let idx = c as u8 - 97;
     if idx > 25 { return None }
-    return CHAR_PIECE_TYPES[idx as uint];
+    return CHAR_PIECE_TYPES[idx as usize];
 }

@@ -4,35 +4,35 @@ use std::fmt;
 use std::cmp::Ordering::{self, Less, Greater};
 
 #[derive(PartialOrd, Eq, PartialEq, Copy)]
-pub struct Square(pub uint);
+pub struct Square(pub u8);
 impl Square {
-    pub fn new (rank:uint, file:uint) -> Square {
+    pub fn new (rank:u8, file:u8) -> Square {
         Square(file | (rank << 3))
     }
 }
 
-impl ops::Add<uint> for Square {
+impl ops::Add<u8> for Square {
     type Output = Square;
 
-    fn add (self, rhs: uint) -> Square {
+    fn add (self, rhs: u8) -> Square {
         let Square(lhs) = self;
         return Square(lhs + rhs);
     }
 }
 
-impl ops::Sub<uint> for Square {
+impl ops::Sub<u8> for Square {
     type Output = Square;
 
-    fn sub (self, rhs: uint) -> Square {
+    fn sub (self, rhs: u8) -> Square {
         let Square(lhs) = self;
         return Square(lhs - rhs);
     }
 }
 
-impl ops::Rem<uint> for Square {
+impl ops::Rem<u8> for Square {
     type Output = Square;
 
-    fn rem (self, rhs: uint) -> Square {
+    fn rem (self, rhs: u8) -> Square {
         let Square(lhs) = self;
         return Square(lhs % rhs);
     }
@@ -65,22 +65,22 @@ pub fn from_str (s: &str) -> Option<Square> {
     let rank = chars[1] as u8 - 49;
     let file = chars[0] as u8 - 97;
     if rank > 7 || file > 7 { return None }
-    return Some(Square::new(rank as uint, file as uint));
+    return Some(Square::new(rank as u8, file as u8));
 }
 
-pub fn abs_diff (Square(s1): Square, Square(s2): Square) -> uint {
-    return SignedInt::abs(s1 as int - s2 as int) as uint;
+pub fn abs_diff (Square(s1): Square, Square(s2): Square) -> u8 {
+    return SignedInt::abs(s1 as i8 - s2 as i8) as u8;
 }
 
-pub fn to_int (Square(s): Square) -> uint {
+pub fn to_int (Square(s): Square) -> u8 {
     return s;
 }
 
-pub fn file (Square(s): Square) -> uint {
+pub fn file (Square(s): Square) -> u8 {
     return s & 0x7;
 }
 
-pub fn rank (Square(s): Square) -> uint {
+pub fn rank (Square(s): Square) -> u8 {
     return (s >> 3) & 0x7;
 }
 
